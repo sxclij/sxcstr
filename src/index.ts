@@ -3,14 +3,11 @@ import {
     getPublicKey,
     finalizeEvent,
     verifyEvent
-} from 'nostr-tools/pure';
-import { SimplePool } from 'nostr-tools/pool';
+} from 'nostr-tools';
+import { SimplePool } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
-import { useWebSocketImplementation } from 'nostr-tools/relay';
-import WebSocket from 'ws';
 
 
-useWebSocketImplementation(WebSocket);
 
 
 const privateKey = generateSecretKey();
@@ -35,7 +32,6 @@ const sub = pool.subscribeMany(
     [
         {
             kinds: [1],
-            authors: [publicKey],
         },
     ],
     {
@@ -51,15 +47,3 @@ const sub = pool.subscribeMany(
         }
     }
 )
-// イベントを作成して送信
-const eventTemplate = {
-    kind: 1,
-    created_at: Math.floor(Date.now() / 1000),
-    tags: [],
-    content: 'こんにちは、Nostr！'
-};
-
-const signedEvent = finalizeEvent(eventTemplate, privateKey);
-pool.publish(relays, signedEvent).then(() => {
-    console.log('publish')
-});
