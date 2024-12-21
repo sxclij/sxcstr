@@ -11,10 +11,7 @@ module.exports = {
   devServer: {
     static: './dist',
     allowedHosts: [
-      'localhost', // localhostからのアクセスを許可
-      '127.0.0.1', // 127.0.0.1からのアクセスを許可
-      '.ngrok.io', // ngrok などを使用している場合
-      'sxcstr.sxclij.com', // 特定のドメインを許可する場合
+      'sxcstr.sxclij.com',
     ],
   },
   module: {
