@@ -22,11 +22,9 @@ console.log("公開鍵 (Npub):", npub);
 const pool = new SimplePool();
 const relays = ['wss://relay.damus.io', 'wss://relay.snort.social', 'wss://nostr.wine'];
 
-// メッセージ表示領域の要素を取得
 const messageContainer = document.getElementById('messages') as HTMLDivElement;
 
 
-// イベントを受信した際の処理
 const sub = pool.subscribeMany(
     relays,
     [
