@@ -2,191 +2,54 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>sxclij掲示板</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            background-color: #f4f4f8;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-
-        h1 {
-            color: #007bff;
-            margin-bottom: 20px;
-        }
-
-        .post-list {
-            width: 80%;
-            max-width: 600px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .post {
-            border-bottom: 1px solid #eee;
-            padding: 10px 0;
-        }
-
-        .post:last-child {
-            border-bottom: none;
-        }
-
-        .post .timestamp {
-            font-size: 0.8em;
-            color: #777;
-            margin-bottom: 5px;
-        }
-
-        .post .message {
-            margin: 0;
-        }
-
-        .post-form {
-            width: 80%;
-            max-width: 600px;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .form-group input[type="text"],
-        .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 1em;
-        }
-
-        .form-group button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-
-        .form-group button:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    <title>シンプルな掲示板</title>
 </head>
 <body>
-    <h1>シンプルな投稿アプリ</h1>
+    <h1>シンプルな掲示板</h1>
 
-    <div class="post-list">
-        <h2>投稿リスト</h2>
-        <div id="posts-container">
-            <!-- 投稿がここに追加されます -->
-            <p>投稿はありません。</p>
+    <form id="postForm">
+        <div>
+            <label for="message">メッセージ:</label><br>
+            <textarea id="message" name="message" rows="4" cols="50"></textarea>
         </div>
-    </div>
+        <button type="submit">投稿</button>
+    </form>
 
-    <div class="post-form">
-        <h2>新規投稿</h2>
-        <form id="new-post-form">
-            <div class="form-group">
-                <label for="message">メッセージ:</label>
-                <textarea id="message" name="message" required></textarea>
-            </div>
-            <div class="form-group">
-                <button type="submit">投稿する</button>
-            </div>
-        </form>
+    <h2>投稿されたメッセージ</h2>
+    <div id="messages">
+        <!-- ここに投稿されたメッセージが表示されます -->
+        <p>まだメッセージはありません。</p>
     </div>
 
     <script>
-        const postsContainer = document.getElementById('posts-container');
-        const newPostForm = document.getElementById('new-post-form');
+        document.getElementById('postForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // デフォルトの送信処理をキャンセル
 
-        async function fetchPosts() {
-            try {
-                const response = await fetch('/posts'); // サーバーのGETエンドポイント
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                displayPosts(data.posts);
-            } catch (error) {
-                console.error('投稿の取得に失敗しました:', error);
-                postsContainer.innerHTML = '<p class="error">投稿の取得に失敗しました。</p>';
-            }
-        }
-
-        function displayPosts(posts) {
-            postsContainer.innerHTML = ''; // 一旦クリア
-            if (posts.length === 0) {
-                postsContainer.innerHTML = '<p>投稿はありません。</p>';
-                return;
-            }
-            posts.forEach(post => {
-                const postDiv = document.createElement('div');
-                postDiv.classList.add('post');
-                postDiv.innerHTML = `
-                    <div class="timestamp">${post.timestamp}</div>
-                    <p class="message">${post.message}</p>
-                `;
-                postsContainer.appendChild(postDiv);
-            });
-        }
-
-        newPostForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
             const messageInput = document.getElementById('message');
             const message = messageInput.value;
 
-            if (!message.trim()) {
-                alert('メッセージを入力してください。');
-                return;
-            }
-
-            try {
-                const response = await fetch('/posts', { // サーバーのPOSTエンドポイント
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message: message })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            fetch('/', { // サーバーのルートにPOSTリクエストを送信
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('投稿が完了しました！');
+                    messageInput.value = ''; // 入力欄をクリア
+                    // ここでメッセージを動的に表示する処理を追加することもできます
+                } else {
+                    alert('投稿に失敗しました: ' + data.message);
                 }
-
-                messageInput.value = ''; // フォームをクリア
-                fetchPosts(); // 投稿リストを更新
-            } catch (error) {
-                console.error('投稿に失敗しました:', error);
-                alert('投稿に失敗しました。');
-            }
+            })
+            .catch(error => {
+                console.error('エラー:', error);
+                alert('投稿中にエラーが発生しました。');
+            });
         });
-
-        // 初回読み込み時と定期的なポーリングで投稿を更新
-        fetchPosts();
-        setInterval(fetchPosts, 5000); // 5秒ごとに更新
     </script>
 </body>
 </html>
