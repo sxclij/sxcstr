@@ -10,6 +10,12 @@
 
 #define PORT 8080
 #define BUFFER_SIZE 65536
+#define SAVEDATA_CAPACITY (1 << 25)
+
+struct savedata {
+    char data[SAVEDATA_CAPACITY];
+    char* 
+}
 
 char* create_http_response(char* dst, size_t dst_size, const char* body, const char* content_type) {
     snprintf(dst, dst_size,
@@ -25,18 +31,9 @@ char* create_http_response(char* dst, size_t dst_size, const char* body, const c
 
 char* read_file(char* dst, size_t dst_size, const char* filename) {
     FILE* fp = fopen(filename, "r");
-    if (fp == NULL) {
-        perror("File open failed");
-        return NULL;
-    }
     fseek(fp, 0, SEEK_END);
     long file_size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    if (file_size >= dst_size) {
-        fprintf(stderr, "File too large to read\n");
-        fclose(fp);
-        return NULL;
-    }
     fread(dst, 1, file_size, fp);
     dst[file_size] = '\0';
     fclose(fp);
@@ -56,11 +53,8 @@ char* handle_post_request(char* response_dst, size_t response_dst_size, const ch
     if (body_start != NULL) {
         body_start += 4;
         printf("Received POST data:\n%s\n", body_start);
-        // ここでPOSTデータを処理する
-        // 今回は受信したPOSTデータをそのままレスポンスとして返す
         return create_http_response(response_dst, response_dst_size, body_start, "text/plain");
     } else {
-        // POSTリクエストにボディがない場合
         snprintf(response_dst, response_dst_size, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
         return response_dst;
     }
@@ -76,12 +70,10 @@ char* handle_request(char* response_dst, size_t response_dst_size, const char* r
         } else if (strcmp(method, "POST") == 0) {
             return handle_post_request(response_dst, response_dst_size, request);
         } else {
-            // 対応していないメソッド
             snprintf(response_dst, response_dst_size, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             return response_dst;
         }
     } else {
-        // リクエストの解析に失敗した場合
         snprintf(response_dst, response_dst_size, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
         return response_dst;
     }
