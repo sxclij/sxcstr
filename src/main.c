@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -25,14 +26,16 @@ char* create_http_response(char* dst, size_t dst_size, const char* body, const c
 char* read_file(char* dst, size_t dst_size, const char* filename) {
     FILE* fp = fopen(filename, "r");
     if (fp == NULL) {
-        return NULL; // Indicate failure, though error handling is supposed to be removed
+        perror("File open failed");
+        return NULL;
     }
     fseek(fp, 0, SEEK_END);
     long file_size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     if (file_size >= dst_size) {
+        fprintf(stderr, "File too large to read\n");
         fclose(fp);
-        return NULL; // Indicate failure if file is too large
+        return NULL;
     }
     fread(dst, 1, file_size, fp);
     dst[file_size] = '\0';
@@ -40,29 +43,48 @@ char* read_file(char* dst, size_t dst_size, const char* filename) {
     return dst;
 }
 
+char* handle_get_request(char* response_dst, size_t response_dst_size, const char* path) {
+    char filename[BUFFER_SIZE];
+    strcpy(filename, "index.html");
+    static char file_content_buffer[BUFFER_SIZE];
+    char* file_content = read_file(file_content_buffer, sizeof(file_content_buffer), filename);
+    return create_http_response(response_dst, response_dst_size, file_content, "text/html");
+}
+
+char* handle_post_request(char* response_dst, size_t response_dst_size, const char* request) {
+    char* body_start = strstr(request, "\r\n\r\n");
+    if (body_start != NULL) {
+        body_start += 4;
+        printf("Received POST data:\n%s\n", body_start);
+        // ここでPOSTデータを処理する
+        // 今回は受信したPOSTデータをそのままレスポンスとして返す
+        return create_http_response(response_dst, response_dst_size, body_start, "text/plain");
+    } else {
+        // POSTリクエストにボディがない場合
+        snprintf(response_dst, response_dst_size, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        return response_dst;
+    }
+}
+
 char* handle_request(char* response_dst, size_t response_dst_size, const char* request) {
     char method[10];
     char path[BUFFER_SIZE];
-    if (sscanf(request, "%s %s", method, path) != 2 || strcmp(method, "GET") != 0) {
-        return NULL; // Or some default error response if needed
-    }
 
-    char filename[BUFFER_SIZE];
-    if (strcmp(path, "/") == 0) {
-        strcpy(filename, "index.html");
+    if (sscanf(request, "%s %s", method, path) >= 1) {
+        if (strcmp(method, "GET") == 0) {
+            return handle_get_request(response_dst, response_dst_size, path);
+        } else if (strcmp(method, "POST") == 0) {
+            return handle_post_request(response_dst, response_dst_size, request);
+        } else {
+            // 対応していないメソッド
+            snprintf(response_dst, response_dst_size, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            return response_dst;
+        }
     } else {
-        strncpy(filename, path + 1, sizeof(filename) - 1);
-        filename[sizeof(filename) - 1] = '\0';
+        // リクエストの解析に失敗した場合
+        snprintf(response_dst, response_dst_size, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        return response_dst;
     }
-
-    static char file_content_buffer[BUFFER_SIZE]; // Still need a static buffer here
-    char* file_content = read_file(file_content_buffer, sizeof(file_content_buffer), filename);
-    if (file_content == NULL) {
-        // Handle file reading failure, though error handling is supposed to be removed
-        return NULL;
-    }
-
-    return create_http_response(response_dst, response_dst_size, file_content, "text/html");
 }
 
 int main() {
@@ -70,28 +92,45 @@ int main() {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     static char request_buffer[BUFFER_SIZE];
-    static char response_buffer[BUFFER_SIZE * 2];
+    static char response_buffer[BUFFER_SIZE];
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == -1) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
 
-    bind(server_fd, (struct sockaddr*)&address, sizeof(address));
+    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) == -1) {
+        perror("Bind failed");
+        exit(EXIT_FAILURE);
+    }
 
-    listen(server_fd, 3);
+    if (listen(server_fd, 3) == -1) {
+        perror("Listen failed");
+        exit(EXIT_FAILURE);
+    }
 
     printf("Listening on port %d...\n", PORT);
 
     while (1) {
         new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+        if (new_socket == -1) {
+            perror("Accept failed");
+            continue;
+        }
+
         ssize_t bytes_received = recv(new_socket, request_buffer, sizeof(request_buffer) - 1, 0);
-        request_buffer[bytes_received] = '\0';
-        printf("Received request:\n%s\n", request_buffer);
-        char* response = handle_request(response_buffer, sizeof(response_buffer), request_buffer);
-        if (response != NULL) {
-            send(new_socket, response, strlen(response), 0);
+        if (bytes_received > 0) {
+            request_buffer[bytes_received] = '\0';
+            printf("Received request:\n%s\n", request_buffer);
+            char* response = handle_request(response_buffer, sizeof(response_buffer), request_buffer);
+            if (response != NULL) {
+                send(new_socket, response, strlen(response), 0);
+            }
         }
         close(new_socket);
     }

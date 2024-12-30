@@ -35,20 +35,6 @@
                 },
                 body: JSON.stringify({ message: message })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('投稿が完了しました！');
-                    messageInput.value = ''; // 入力欄をクリア
-                    // ここでメッセージを動的に表示する処理を追加することもできます
-                } else {
-                    alert('投稿に失敗しました: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('エラー:', error);
-                alert('投稿中にエラーが発生しました。');
-            });
         });
     </script>
 </body>
