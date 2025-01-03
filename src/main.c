@@ -38,13 +38,6 @@ void file_read(struct string* dst, const char* path) {
     fseek(fp, 0, SEEK_END);
     dst->size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    dst->data = malloc(dst->size);
-    if (!dst->data) {
-        perror("Error allocating memory");
-        fclose(fp);
-        dst->size = 0;
-        return;
-    }
     fread(dst->data, 1, dst->size, fp);
     fclose(fp);
 }
