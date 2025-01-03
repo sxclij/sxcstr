@@ -9,13 +9,14 @@
 #include <sys/stat.h>
 
 #define PORT 8080
-#define BUFFER_SIZE 65536
-#define SAVEDATA_CAPACITY (1 << 25)
+#define BUFFER_SIZE 1024 * 1024 * 16
+#define SAVEDATA_CAPACITY 1024 * 1024 * 128
 
-struct savedata {
-    char data[SAVEDATA_CAPACITY];
-    char* 
-}
+struct global {
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int addrlen;
+};
 
 char* create_http_response(char* dst, size_t dst_size, const char* body, const char* content_type) {
     snprintf(dst, dst_size,
@@ -110,11 +111,6 @@ int main() {
 
     while (1) {
         new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-        if (new_socket == -1) {
-            perror("Accept failed");
-            continue;
-        }
-
         ssize_t bytes_received = recv(new_socket, request_buffer, sizeof(request_buffer) - 1, 0);
         if (bytes_received > 0) {
             request_buffer[bytes_received] = '\0';
