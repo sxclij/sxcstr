@@ -1,76 +1,150 @@
-#include <bits/stdc++.h>
-using namespace std;
- 
-const int PORT = 8080;
-const int BUFFER_SIZE = 65536;
-const char *FILE_DEFAULT = "index.html";
-const char *HTTP_OK = "HTTP/1.0 200 OK\r\n";
-const char *HTTP_NOT_FOUND = "HTTP/1.0 404 Not Found\r\n";
-const char *CONTENT_TYPE_HTML = "Content-Type: text/html\r\n\r\n";
-const char *CONTENT_TYPE_PLAIN = "Content-Type: text/plain\r\n\r\n";
-const char *HTML_PATH = "routes";
-const char *HTML_INDEX = "index";
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
-void file_read(char* dst, const char* path) {
-    // 後で実装する
-}
+#define PORT 8080
+#define BUFFER_SIZE (1024 * 1024 * 16)
+#define SAVEDATA_CAPACITY (1024 * 1024 * 128)
 
-void http_connection(int client_socket) {
-    char *recv_buf = (char *)malloc(BUFFER_SIZE);
-    char *html_buf = (char *)malloc(BUFFER_SIZE);
-    ssize_t bytes_received = recv(client_socket, recv_buf, BUFFER_SIZE - 1, 0);
-    if (bytes_received <= 0) {
-        free(recv_buf);
-        free(html_buf);
-        close(client_socket);
+struct string {
+    char* data;
+    uint32_t size;
+};
+
+struct global {
+    char buf_recv_data[BUFFER_SIZE];
+    char buf_send_data[BUFFER_SIZE];
+    char buf_html_data[BUFFER_SIZE];
+    char buf_path_data[BUFFER_SIZE];
+    struct string buf_recv;
+    struct string buf_send;
+    struct string buf_html;
+    struct string buf_path;
+    int server_fd;
+    int current_socket;
+    struct sockaddr_in address;
+    int addrlen;
+};
+
+void file_read(struct string* dst, const char* path) {
+    FILE* fp = fopen(path, "r");
+    if (!fp) {
+        perror("Error opening file");
+        dst->size = 0;
         return;
     }
-    recv_buf[bytes_received] = '\0';
-    free(recv_buf);
-    free(html_buf);
-    close(client_socket);
+
+    fseek(fp, 0, SEEK_END);
+    dst->size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    dst->data = malloc(dst->size);
+    if (!dst->data) {
+        perror("Error allocating memory");
+        fclose(fp);
+        dst->size = 0;
+        return;
+    }
+    fread(dst->data, 1, dst->size, fp);
+    fclose(fp);
 }
 
-int http_init() {
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket == -1) {
-        perror("socket failed");
+void http_response_finalize(struct string* dst, struct string* body, const char* content_type) {
+    dst->size = sprintf(dst->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, body->size);
+    memcpy(dst->data+dst->size,body->data,body->size);
+    dst->size += body->size;
+}
+
+void http_handle_get(struct string* dst, struct string* src) {
+    http_response_finalize(dst, src, "text/html");
+}
+
+void http_handle_post(struct string* dst, struct string* src) {
+    // Echo received data for POST request
+    struct string body = { .data = src->data, .size = src->size };
+    http_response_finalize(dst, &body, "text/plain");
+}
+
+void http_handle_request(struct string* dst, struct string* src, struct string* buf_html) {
+    if (strncmp(src->data, "GET", 3) == 0) {
+        http_handle_get(dst, buf_html);
+    } else if (strncmp(src->data, "POST", 4) == 0) {
+        http_handle_post(dst, src);
+    } else {
+        const char* body_text = "<html><body><h1>Method Not Allowed</h1></body></html>";
+        struct string body = { .data = (char*)body_text, .size = strlen(body_text) };
+        http_response_finalize(dst, &body, "text/html");
+    }
+}
+
+void global_init(struct global* global) {
+    memset(global, 0, sizeof(struct global));
+    global->buf_recv.data = global->buf_recv_data;
+    global->buf_send.data = global->buf_send_data;
+    global->buf_html.data = global->buf_html_data;
+    global->buf_path.data = global->buf_path_data;
+    global->buf_recv.size = 0;
+    global->buf_send.size = 0;
+    global->buf_html.size = 0;
+    global->buf_path.size = 0;
+    
+    file_read(&global->buf_html, "index.html");
+
+    global->server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (global->server_fd == 0) {
+        perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    struct sockaddr_in server_address;
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
-
-    if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) == -1) {
-        perror("bind failed");
-        close(server_socket);
+    int opt = 1;
+    if (setsockopt(global->server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_socket, BACKLOG) == -1) {
-        perror("listen failed");
-        close(server_socket);
+    global->address.sin_family = AF_INET;
+    global->address.sin_addr.s_addr = INADDR_ANY;
+    global->address.sin_port = htons(PORT);
+    global->addrlen = sizeof(global->address);
+
+    if (bind(global->server_fd, (struct sockaddr*)&global->address, sizeof(global->address)) < 0) {
+        perror("Bind failed");
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d\n", PORT);
-    return server_socket;
+    if (listen(global->server_fd, 3) < 0) {
+        perror("Listen failed");
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main() {
-    int server_socket = http_init();
+    static struct global global;
+    global_init(&global);
+    printf("Server listening on port %d\n", PORT);
     while (1) {
-        struct sockaddr_in client_address;
-        socklen_t client_len = sizeof(client_address);
-        int client_socket = accept(server_socket, (struct sockaddr *)&client_address, &client_len);
-        if (client_socket == -1) {
-            perror("accept failed");
+        global.current_socket = accept(global.server_fd, (struct sockaddr*)&global.address, &global.addrlen);
+        if (global.current_socket < 0) {
+            perror("Accept failed");
             continue;
         }
-        http_connection(client_socket);
+        int bytes_read = read(global.current_socket, global.buf_recv_data, BUFFER_SIZE);
+        if (bytes_read <= 0) {
+            if (bytes_read == 0) {
+                printf("Client disconnected.\n");
+            } else {
+                perror("Read failed");
+            }
+            close(global.current_socket);
+            continue;
+        }
+        global.buf_recv.size = bytes_read;
+        http_handle_request(&global.buf_send, &global.buf_recv, &global.buf_html);
+        send(global.current_socket, global.buf_send.data, global.buf_send.size, 0);
+        close(global.current_socket);
     }
-    close(server_socket); // unreachable, but for completeness
+
     return 0;
 }
