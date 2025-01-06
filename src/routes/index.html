@@ -3,20 +3,109 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>sxcstr</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="sxclijさんのお手製サイト">
+    <meta name="keywords" content="sxclij">
+    <meta name="author" content="sxclij">
+    <title>sxclij</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            padding: 0.5rem 1rem;
+            color: #fff;
+        }
+
+        .navbar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 2rem;
+            background-color: #f4f4f4;
+        }
+
+        .hero h1 {
+            margin-bottom: 1rem;
+        }
+
+        .links {
+            padding: 1rem;
+            margin: 1rem auto;
+            max-width: 800px;
+        }
+
+        footer {
+            text-align: center;
+            background-color: #333;
+            color: #fff;
+            padding: 1rem;
+            margin-top: 2rem;
+        }
+    </style>
 </head>
 
-<nav class="navbar">
-    <ul>
-        <li><a href="https://sxcstr.sxclij.com/">sxclij.com</a></li>
-    </ul>
-</nav>
-
 <body>
-    <h1>sxclijのホームページ（仮）</h1>
-    <h2>リンク集</h2>
-    <h3>日報</h3>
-    <a href="https://sxcstr.sxclij.com/daily/20250106">2025/01/06</a>
+    <header>
+        <nav class="navbar">
+            <a href="/" class="logo" aria-label="sxclijメインサイト">sxclij.com</a>
+            <ul>
+                <li><a href="#hero">Home</a></li>
+                <li><a href="#links">Links</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="hero" class="hero">
+            <h1>sxclij.com</h1>
+            <p>C言語製ホームページ。malloc不使用オーガニック。</p>
+        </section>
+
+        <section id="links" class="links">
+            <h2>Links</h2>
+            <article>
+                <h3>daily</h3>
+                <ul>
+                    <li><a href="/daily/20241231">2024/12/31</a></li>
+                    <li><a href="/daily/20250101">2025/01/01</a></li>
+                    <li><a href="/daily/20250102">2025/01/02</a></li>
+                    <li><a href="/daily/20250106">2025/01/06</a></li>
+                </ul>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 sxclij. All Rights Reserved.</p>
+    </footer>
 </body>
 
 </html>
