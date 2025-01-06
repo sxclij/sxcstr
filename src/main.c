@@ -29,6 +29,9 @@ struct global {
     int addrlen;
 };
 
+void string_clear(struct string* dst) {
+    dst->size = 0;
+}
 void string_cat(struct string* dst, struct string src) {
     memcpy(dst->data + dst->size, src.data, src.size);
     dst->size += src.size;
@@ -64,7 +67,7 @@ void http_handle_get(struct string* buf_send, struct string* buf_html, struct st
     if (path_start[0] == '/' && path_size == 1) {
         file_read(buf_html, "./routes/index.html");
     } else {
-        buf_path->size = 0;
+        string_clear(buf_path);
         string_cat_str(buf_path, "./routes");
         string_cat(buf_path, (struct string){.data = path_start, .size = path_size});
         string_cat_str(buf_path, ".html");
@@ -75,7 +78,6 @@ void http_handle_get(struct string* buf_send, struct string* buf_html, struct st
 }
 
 void http_handle_post(struct string* buf_send, struct string* buf_recv) {
-    // Echo received data for POST request
     struct string body = { .data = buf_recv->data, .size = buf_recv->size };
     http_response_finalize(buf_send, &body, "text/plain");
 }
@@ -94,14 +96,10 @@ void http_handle_request(struct string* buf_send, struct string* buf_recv, struc
 
 void global_init(struct global* global) {
     memset(global, 0, sizeof(struct global));
-    global->buf_recv.data = global->buf_recv_data;
-    global->buf_send.data = global->buf_send_data;
-    global->buf_html.data = global->buf_html_data;
-    global->buf_path.data = global->buf_path_data;
-    global->buf_recv.size = 0;
-    global->buf_send.size = 0;
-    global->buf_html.size = 0;
-    global->buf_path.size = 0;
+    global->buf_recv.data = (struct string){.data = global->buf_recv_data, .size = 0};
+    global->buf_send.data = (struct string){.data = global->buf_send_data, .size = 0};
+    global->buf_html.data = (struct string){.data = global->buf_html_data, .size = 0};
+    global->buf_path.data = (struct string){.data = global->buf_path_data, .size = 0};
 
     file_read(&global->buf_html, "index.html");
 
