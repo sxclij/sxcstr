@@ -1,41 +1,22 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <title>sxcstr</title>
 </head>
+
+<nav class="navbar">
+    <ul>
+        <li><a href="https://sxcstr.sxclij.com/">sxclij.com</a></li>
+    </ul>
+</nav>
+
 <body>
-    <h1>sxcstr</h1>
-
-    <form id="postForm">
-        <div>
-            <label for="message">メッセージ:</label><br>
-            <textarea id="message" name="message" rows="4" cols="50"></textarea>
-        </div>
-        <button type="submit">投稿</button>
-    </form>
-
-    <h2>投稿されたメッセージ</h2>
-    <div id="messages">
-        <!-- ここに投稿されたメッセージが表示されます -->
-        <p>まだメッセージはありません。</p>
-    </div>
-
-    <script>
-        document.getElementById('postForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // デフォルトの送信処理をキャンセル
-
-            const messageInput = document.getElementById('message');
-            const message = messageInput.value;
-
-            fetch('/', { // サーバーのルートにPOSTリクエストを送信
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: message })
-            })
-        });
-    </script>
+    <h1>sxclijのホームページ（仮）</h1>
+    <h2>リンク集</h2>
+    <h3>日報</h3>
+    <a href="https://sxcstr.sxclij.com/daily/20250106">2025/01/06</a>
 </body>
+
 </html>
