@@ -11,20 +11,27 @@ const char *CONTENT_TYPE_PLAIN = "Content-Type: text/plain\r\n\r\n";
 const char *HTML_PATH = "routes";
 const char *HTML_INDEX = "index";
 
-void handle_connection(int client_socket) {
-    char *buffer = (char *)malloc(BUFFER_SIZE);
-    ssize_t bytes_received = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
+void file_read(char* dst, const char* path) {
+    // 後で実装する
+}
+
+void http_connection(int client_socket) {
+    char *recv_buf = (char *)malloc(BUFFER_SIZE);
+    char *html_buf = (char *)malloc(BUFFER_SIZE);
+    ssize_t bytes_received = recv(client_socket, recv_buf, BUFFER_SIZE - 1, 0);
     if (bytes_received <= 0) {
-        free(buffer);
+        free(recv_buf);
+        free(html_buf);
         close(client_socket);
         return;
     }
-    buffer[bytes_received] = '\0';
-    free(buffer);
+    recv_buf[bytes_received] = '\0';
+    free(recv_buf);
+    free(html_buf);
     close(client_socket);
 }
 
-int server_init() {
+int http_init() {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1) {
         perror("socket failed");
@@ -53,7 +60,7 @@ int server_init() {
 }
 
 int main() {
-    int server_socket = server_init();
+    int server_socket = http_init();
     while (1) {
         struct sockaddr_in client_address;
         socklen_t client_len = sizeof(client_address);
@@ -62,7 +69,7 @@ int main() {
             perror("accept failed");
             continue;
         }
-        handle_connection(client_socket);
+        http_connection(client_socket);
     }
     close(server_socket); // unreachable, but for completeness
     return 0;
