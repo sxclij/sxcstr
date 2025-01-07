@@ -93,6 +93,9 @@ void http_handle_get(struct string* buf_send, struct string* buf_file, struct st
     } else if(string_cmp_str(path_string, "/favicon.ico") == 0) {
         file_read(buf_file, "./routes/favicon.svg");
         http_response_finalize(buf_send, buf_file, "image/svg+xml");
+    } else if(string_cmp_str(path_string, "/robots.txt") == 0) {
+        file_read(buf_file, "./routes/robots.txt");
+        http_response_finalize(buf_send, buf_file, "text/plain");
     } else if(string_cmp_str(path_string, "/sitemap.xml") == 0) {
         file_read(buf_file, "./routes/sitemap.xml");
         http_response_finalize(buf_send, buf_file, "application/xml");
@@ -129,8 +132,6 @@ void global_init(struct global* global) {
     global->buf_send = (struct string){.data = global->buf_send_data, .size = 0};
     global->buf_file = (struct string){.data = global->buf_file_data, .size = 0};
     global->buf_path = (struct string){.data = global->buf_path_data, .size = 0};
-
-    file_read(&global->buf_file, "index.html");
 
     global->server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (global->server_fd == 0) {

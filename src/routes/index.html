@@ -8,21 +8,28 @@
     <meta name="keywords" content="sxclij">
     <meta name="author" content="sxclij">
     <title>sxclij</title>
-    <link rel="stylesheet" href="styles.css">
     <style>
+        /* ダークモード基本設定 */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
+            background-color: #121212; /* ダークグレーの背景色 */
+            color: #f0f0f0; /* 明るい文字色 */
+            line-height: 1.6; /* 行間を調整 */
+            padding-bottom: 3rem; /* フッターのための余白 */
         }
 
+        /* ナビゲーションバー */
         .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             background-color: #333;
-            padding: 0.5rem 1rem;
-            color: #fff;
+            padding: 1rem; /* 上下のpaddingを調整 */
+        }
+
+        .navbar a.logo {
+            font-weight: bold; /* ロゴを強調 */
         }
 
         .navbar ul {
@@ -30,43 +37,90 @@
             margin: 0;
             padding: 0;
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem; /* リンク間の余白を調整 */
         }
 
         .navbar a {
-            color: #fff;
+            color: #eee; /* 少し明るいリンク色 */
             text-decoration: none;
             padding: 0.5rem 1rem;
-            border-radius: 4px;
+            border-radius: 0.3rem; /* 少し角を丸く */
             transition: background-color 0.3s ease;
         }
 
         .navbar a:hover {
-            background-color: #575757;
+            background-color: #555; /* ホバー時の背景色 */
         }
 
+        /* ヒーローセクション */
         .hero {
             text-align: center;
-            padding: 2rem;
-            background-color: #f4f4f4;
+            padding: 3rem 2rem; /* 上下のpaddingを大きく */
+            background-color: #212121; /* 少し暗い背景色 */
+            border-bottom: 1px solid #444; /* 区切り線 */
         }
 
         .hero h1 {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 2.5rem; /* タイトルを大きく */
         }
 
+        .hero p {
+            font-size: 1.1rem;
+            color: #ccc; /* 少し薄い文字色 */
+        }
+
+        /* リンクセクション */
         .links {
-            padding: 1rem;
-            margin: 1rem auto;
+            padding: 2rem;
+            margin: 2rem auto;
             max-width: 800px;
         }
 
+        .links h2 {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #444; /* 見出しの区切り線 */
+            padding-bottom: 0.5rem;
+        }
+
+        .links article {
+            margin-bottom: 1.5rem;
+        }
+
+        .links article h3 {
+            margin-bottom: 0.8rem;
+            font-size: 1.3rem;
+        }
+
+        .links ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .links li a {
+            color: #bbb;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .links li a:hover {
+            color: #fff;
+        }
+
+        /* フッター */
         footer {
             text-align: center;
             background-color: #333;
-            color: #fff;
+            color: #eee;
             padding: 1rem;
-            margin-top: 2rem;
+            position: fixed; /* 下部に固定 */
+            bottom: 0;
+            left: 0;
+            width: 100%;
         }
     </style>
 </head>
@@ -78,7 +132,6 @@
             <ul>
                 <li><a href="#hero">Home</a></li>
                 <li><a href="#links">Links</a></li>
-                <li><a href="#contact">Contact</a></li>
             </ul>
         </nav>
     </header>
@@ -105,7 +158,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2024 sxclij. All Rights Reserved.</p>
+        <p>© 2024 sxclij. All Rights Reserved.</p>
     </footer>
 </body>
 
