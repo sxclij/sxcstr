@@ -29,6 +29,9 @@ struct global {
     int addrlen;
 };
 
+struct string string_make(char* data, uint32_t size) {
+    return (struct string) {data, .size = size};
+}
 void string_clear(struct string* dst) {
     dst->size = 0;
 }
@@ -37,14 +40,14 @@ void string_cpy(struct string* dst, struct string src) {
     dst->size = src.size;
 }
 void string_cpy_str(struct string* dst, char* src) {
-    string_cpy(dst, (struct string){.data = src, .size = strlen(src)});
+    string_cpy(dst, string_make (src, strlen(src)));
 }
 void string_cat(struct string* dst, struct string src) {
     memcpy(dst->data + dst->size, src.data, src.size);
     dst->size += src.size;
 }
 void string_cat_str(struct string* dst, char* src) {
-    string_cat(dst, (struct string){.data = src, .size = strlen(src)});
+    string_cat(dst, string_make (src, strlen(src)));
 }
 void string_tostr(struct string* dst) {
     dst->data[dst->size] = '\0';
@@ -57,7 +60,7 @@ int string_cmp(struct string s1, struct string s2) {
     }
 }
 int string_cmp_str(struct string s1, char* s2) {
-    return string_cmp(s1, (struct string){.data = s2, .size = strlen(s2)});
+    return string_cmp(s1, string_make (s2, strlen(s2)));
 }
 
 void file_read(struct string* dst, const char* path) {
@@ -84,7 +87,7 @@ void http_handle_get(struct string* buf_send, struct string* buf_file, struct st
     char* path_start = strstr(buf_recv->data, "/");
     char* path_end = strstr(path_start, " ");
     int path_size = path_end - path_start;
-    struct string path_string = (struct string){.data = path_start, .size = path_size};
+    struct string path_string = string_make (path_start, path_size);
     if (string_cmp_str(path_string, "/") == 0) {
         file_read(buf_file, "./routes/index.html");
         http_response_finalize(buf_send, buf_file, "text/html");
@@ -126,10 +129,10 @@ void http_handle_request(struct string* buf_send, struct string* buf_recv, struc
 
 void global_init(struct global* global) {
     memset(global, 0, sizeof(struct global));
-    global->buf_recv = (struct string){.data = global->buf_recv_data, .size = 0};
-    global->buf_send = (struct string){.data = global->buf_send_data, .size = 0};
-    global->buf_file = (struct string){.data = global->buf_file_data, .size = 0};
-    global->buf_path = (struct string){.data = global->buf_path_data, .size = 0};
+    global->buf_recv = string_make( global->buf_recv_data, 0);
+    global->buf_send = string_make( global->buf_send_data, 0);
+    global->buf_file = string_make( global->buf_file_data, 0);
+    global->buf_path = string_make( global->buf_path_data, 0);
 
     global->server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (global->server_fd == 0) {
