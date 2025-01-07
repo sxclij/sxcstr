@@ -90,6 +90,9 @@ void http_handle_get(struct string* buf_send, struct string* buf_file, struct st
     if (string_cmp_str(path_string, "/") == 0) {
         file_read(buf_file, "./routes/index.html");
         http_response_finalize(buf_send, buf_file, "text/html");
+    } else if(string_cmp_str(path_string, "/favicon.ico") == 0) {
+        file_read(buf_file, "./routes/favicon.svg");
+        http_response_finalize(buf_send, buf_file, "image/svg+xml");
     } else if(string_cmp_str(path_string, "/sitemap.xml") == 0) {
         file_read(buf_file, "./routes/sitemap.xml");
         http_response_finalize(buf_send, buf_file, "application/xml");
