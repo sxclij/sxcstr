@@ -50,12 +50,10 @@ void string_tostr(struct string* dst) {
     dst->data[dst->size] = '\0';
 }
 int string_cmp(struct string s1, struct string s2) {
-    if(s1.size > s2.size) {
-        return s1.size;
-    } else if(s1.size < s2.size) {
-        return s2.size;
-    } else {
+    if(s1.size == s2.size) {
         return memcmp(s1.data, s2.data, s1.size);
+    }else {
+        return s1.size - s2.size;
     }
 }
 int string_cmp_str(struct string s1, char* s2) {
