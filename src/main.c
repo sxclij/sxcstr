@@ -9,6 +9,10 @@
 #define BUFFER_SIZE (1024 * 1024 * 16)
 #define SAVEDATA_CAPACITY (1024 * 1024 * 128)
 
+enum result_type {
+    result_type_ok,
+    result_type_err,
+};
 struct string {
     char* data;
     uint32_t size;
@@ -23,10 +27,10 @@ struct global {
     struct string buf_send;
     struct string buf_file;
     struct string buf_path;
-    int server_fd;
-    int current_socket;
-    struct sockaddr_in address;
-    int addrlen;
+    int http_server;
+    int http_client;
+    struct sockaddr_in http_address;
+    int http_addrlen;
 };
 
 struct string string_make(char* data, uint32_t size) {
@@ -126,7 +130,34 @@ void http_handle_request(struct string* buf_send, struct string* buf_recv, struc
         http_response_finalize(buf_send, &body, "text/html");
     }
 }
+enum result_type http_read(struct string* buf_recv, int http_client) {
+    int bytes_read = read(http_client, buf_recv->data, BUFFER_SIZE);
+    if (bytes_read <= 0) {
+        if (bytes_read == 0) {
+            printf("Client disconnected.\n");
+        } else {
+            perror("Read failed");
+        }
+        return result_type_err;
+    }
+    buf_recv->size = bytes_read;
+    return result_type_ok;
+}
 
+void global_loop(struct global* global) {
+    while (1) {
+        global->http_client = accept(global->http_server, (struct sockaddr*)&global->http_address, &global->http_addrlen);
+        if (global->http_client < 0) {
+            perror("Accept failed");
+            continue;
+        }
+        if (http_read(&global->buf_recv, global->http_client) == result_type_ok) {
+            http_handle_request(&global->buf_send, &global->buf_recv, &global->buf_file, &global->buf_path);
+            send(global->http_client, global->buf_send.data, global->buf_send.size, 0);
+        }
+        close(global->http_client);
+    }
+}
 void global_init(struct global* global) {
     memset(global, 0, sizeof(struct global));
     global->buf_recv = string_make( global->buf_recv_data, 0);
@@ -134,29 +165,29 @@ void global_init(struct global* global) {
     global->buf_file = string_make( global->buf_file_data, 0);
     global->buf_path = string_make( global->buf_path_data, 0);
 
-    global->server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (global->server_fd == 0) {
+    global->http_server = socket(AF_INET, SOCK_STREAM, 0);
+    if (global->http_server == 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
     int opt = 1;
-    if (setsockopt(global->server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+    if (setsockopt(global->http_server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
     }
 
-    global->address.sin_family = AF_INET;
-    global->address.sin_addr.s_addr = INADDR_ANY;
-    global->address.sin_port = htons(PORT);
-    global->addrlen = sizeof(global->address);
+    global->http_address.sin_family = AF_INET;
+    global->http_address.sin_addr.s_addr = INADDR_ANY;
+    global->http_address.sin_port = htons(PORT);
+    global->http_addrlen = sizeof(global->http_address);
 
-    if (bind(global->server_fd, (struct sockaddr*)&global->address, sizeof(global->address)) < 0) {
+    if (bind(global->http_server, (struct sockaddr*)&global->http_address, sizeof(global->http_address)) < 0) {
         perror("Bind failed");
         exit(EXIT_FAILURE);
     }
 
-    if (listen(global->server_fd, 3) < 0) {
+    if (listen(global->http_server, 3) < 0) {
         perror("Listen failed");
         exit(EXIT_FAILURE);
     }
@@ -166,27 +197,7 @@ int main() {
     static struct global global;
     global_init(&global);
     printf("Server listening on port %d\n", PORT);
-    while (1) {
-        global.current_socket = accept(global.server_fd, (struct sockaddr*)&global.address, &global.addrlen);
-        if (global.current_socket < 0) {
-            perror("Accept failed");
-            continue;
-        }
-        int bytes_read = read(global.current_socket, global.buf_recv_data, BUFFER_SIZE);
-        if (bytes_read <= 0) {
-            if (bytes_read == 0) {
-                printf("Client disconnected.\n");
-            } else {
-                perror("Read failed");
-            }
-            close(global.current_socket);
-            continue;
-        }
-        global.buf_recv.size = bytes_read;
-        http_handle_request(&global.buf_send, &global.buf_recv, &global.buf_file, &global.buf_path);
-        send(global.current_socket, global.buf_send.data, global.buf_send.size, 0);
-        close(global.current_socket);
-    }
-
+    global_loop(&global);
+    printf("Server stopped.");
     return 0;
 }
