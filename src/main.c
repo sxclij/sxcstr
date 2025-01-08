@@ -42,7 +42,7 @@ const struct string string_make(char* data, uint32_t size) {
     return (const struct string){.data = data, .size = size};
 }
 
-struct string string_make_str(char* data) {
+const struct string string_make_str(char* data) {
     return string_make(data, strlen(data));
 }
 
@@ -159,7 +159,6 @@ void http_handle_get(struct string* buf_file, struct string* buf_path, const cha
     if (file_read(buf_file, buf_path->data) == result_type_ok) {
         *contenttype = http_contenttype(buf_path->data);
     } else {
-        *buf_file = string_make_str("<html><body><h1>404 Not Found</h1></body></html>");
         *contenttype = "text/html";
     }
 }
@@ -171,7 +170,7 @@ void http_handle_request(struct string* buf_send, const struct string buf_recv, 
     if (strncmp(buf_recv.data, "GET", 3) == 0) {
         http_handle_get(buf_file, buf_path, &contenttype, buf_recv);
     } else {
-        *buf_file = string_make_str("<html><body><h1>Method Not Allowed</h1></body></html>");
+        string_clear(buf_file);
     }
 
     http_response_finalize(buf_send, *buf_file, contenttype);
