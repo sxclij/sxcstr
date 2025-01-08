@@ -67,67 +67,108 @@ int string_cmp_str(struct string s1, char* s2) {
     return string_cmp(s1, string_make (s2, strlen(s2)));
 }
 
-void file_read(struct string* dst, const char* path) {
+enum result_type file_read(struct string* dst, const char* path) {
     FILE* fp = fopen(path, "r");
     if (!fp) {
         printf("Error opening file. %s\n", path);
         dst->size = 0;
-        return;
+        return result_type_err;
     }
     fseek(fp, 0, SEEK_END);
     dst->size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     fread(dst->data, 1, dst->size, fp);
     fclose(fp);
+    return result_type_ok;
 }
 
+const char* http_contenttype(const char* path) {
+    const char* ext = strrchr(path, '.');
+    if (!ext) {
+        return "application/octet-stream";
+    }
+    if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) {
+        return "text/html";
+    } else if (strcmp(ext, ".txt") == 0) {
+        return "text/plain";
+    } else if (strcmp(ext, ".xml") == 0) {
+        return "application/xml";
+    } else if (strcmp(ext, ".css") == 0) {
+        return "text/css";
+    } else if (strcmp(ext, ".js") == 0) {
+        return "application/javascript";
+    } else if (strcmp(ext, ".png") == 0) {
+        return "image/png";
+    } else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) {
+        return "image/jpeg";
+    } else if (strcmp(ext, ".ico") == 0) {
+        return "image/x-icon";
+    } else if (strcmp(ext, ".svg") == 0) {
+        return "image/svg+xml";
+    } else if (strcmp(ext, ".json") == 0) {
+        return "application/json";
+    } else if (strcmp(ext, ".woff") == 0) {
+        return "font/woff";
+    } else if (strcmp(ext, ".woff2") == 0) {
+        return "font/woff2";
+    } else if (strcmp(ext, ".ttf") == 0) {
+        return "font/ttf";
+    } else if (strcmp(ext, ".otf") == 0) {
+        return "font/otf";
+    } else if (strcmp(ext, ".mp4") == 0) {
+        return "video/mp4";
+    } else if (strcmp(ext, ".webm") == 0) {
+        return "video/webm";
+    } else {
+        return "application/octet-stream";
+    }
+}
 void http_response_finalize(struct string* buf_send, struct string* body, const char* content_type) {
     buf_send->size = sprintf(buf_send->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, body->size);
     memcpy(buf_send->data+buf_send->size,body->data,body->size);
     buf_send->size += body->size;
 }
-
-void http_handle_get(struct string* buf_send, struct string* buf_file, struct string* buf_path, struct string* buf_recv) {
-    char* path_start = strstr(buf_recv->data, "/");
+void http_handle_get_readfile(struct string* buf_file, struct string* buf_path, struct string path_string, const char** contenttype) {
+    string_cpy_str(buf_path, "./routes");
+    string_cat(buf_path, path_string);
+    string_tostr(buf_path);
+    *contenttype = http_contenttype(buf_path->data);
+    if(file_read(buf_file, buf_path->data) == result_type_ok) {
+        return;
+    }
+    string_cat_str(buf_path, ".html");
+    string_tostr(buf_path);
+    *contenttype = http_contenttype(buf_path->data);
+    if(file_read(buf_file, buf_path->data) == result_type_ok) {
+        return;
+    }
+}
+void http_handle_get(struct string* buf_file, struct string* buf_path, const char** contenttype, struct string buf_recv) {
+    char* path_start = strstr(buf_recv.data, "/");
     char* path_end = strstr(path_start, " ");
     int path_size = path_end - path_start;
-    struct string path_string = string_make (path_start, path_size);
+    struct string path_string = string_make(path_start, path_size);
     if (string_cmp_str(path_string, "/") == 0) {
-        file_read(buf_file, "./routes/index.html");
-        http_response_finalize(buf_send, buf_file, "text/html");
+        string_cpy_str(buf_path, "/index");
+        http_handle_get_readfile(buf_file, buf_path, path_string, contenttype);
     } else if(string_cmp_str(path_string, "/favicon.ico") == 0) {
-        file_read(buf_file, "./routes/favicon.svg");
-        http_response_finalize(buf_send, buf_file, "image/svg+xml");
-    } else if(string_cmp_str(path_string, "/robots.txt") == 0) {
-        file_read(buf_file, "./routes/robots.txt");
-        http_response_finalize(buf_send, buf_file, "text/plain");
-    } else if(string_cmp_str(path_string, "/sitemap.xml") == 0) {
-        file_read(buf_file, "./routes/sitemap.xml");
-        http_response_finalize(buf_send, buf_file, "application/xml");
+        string_cpy_str(buf_path, "/favicon.svg");
+        http_handle_get_readfile(buf_file, buf_path, path_string, contenttype);
     } else {
-        string_cpy_str(buf_path, "./routes");
-        string_cat(buf_path, path_string);
-        string_cat_str(buf_path, ".html");
-        string_tostr(buf_path);
-        file_read(buf_file, buf_path->data);
-        http_response_finalize(buf_send, buf_file, "text/html");
+        http_handle_get_readfile(buf_file, buf_path, path_string, contenttype);
     }
 }
 
-void http_handle_post(struct string* buf_send, struct string* buf_recv) {
-    struct string body = { .data = buf_recv->data, .size = buf_recv->size };
-    http_response_finalize(buf_send, &body, "text/plain");
-}
-
-void http_handle_request(struct string* buf_send, struct string* buf_recv, struct string* buf_file, struct string* buf_path) {
-    if (strncmp(buf_recv->data, "GET", 3) == 0) {
-        http_handle_get(buf_send, buf_file, buf_path, buf_recv);
-    } else if (strncmp(buf_recv->data, "POST", 4) == 0) {
-        http_handle_post(buf_send, buf_recv);
-    } else {
+void http_handle_request(struct string* buf_send, struct string buf_recv, struct string* buf_file, struct string* buf_path) {
+    const char* contenttype;
+    if (strncmp(buf_recv.data, "GET", 3) == 0) {
+        http_handle_get(buf_file, buf_path, &contenttype, buf_recv);
+        http_response_finalize(buf_send, buf_file, contenttype);
+    }else {
         const char* body_text = "<html><body><h1>Method Not Allowed</h1></body></html>";
         struct string body = { .data = (char*)body_text, .size = strlen(body_text) };
-        http_response_finalize(buf_send, &body, "text/html");
+        contenttype = "text/html";
+        http_response_finalize(buf_send, &body, contenttype);
     }
 }
 enum result_type http_read(struct string* buf_recv, int http_client) {
@@ -152,7 +193,7 @@ void global_loop(struct global* global) {
             continue;
         }
         if (http_read(&global->buf_recv, global->http_client) == result_type_ok) {
-            http_handle_request(&global->buf_send, &global->buf_recv, &global->buf_file, &global->buf_path);
+            http_handle_request(&global->buf_send, global->buf_recv, &global->buf_file, &global->buf_path);
             send(global->http_client, global->buf_send.data, global->buf_send.size, 0);
         }
         close(global->http_client);
