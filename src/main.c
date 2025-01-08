@@ -158,7 +158,7 @@ void global_loop(struct global* global) {
         close(global->http_client);
     }
 }
-void global_init(struct global* global) {
+enum result_type global_init(struct global* global) {
     memset(global, 0, sizeof(struct global));
     global->buf_recv = string_make( global->buf_recv_data, 0);
     global->buf_send = string_make( global->buf_send_data, 0);
@@ -168,13 +168,13 @@ void global_init(struct global* global) {
     global->http_server = socket(AF_INET, SOCK_STREAM, 0);
     if (global->http_server == 0) {
         perror("Socket creation failed");
-        exit(EXIT_FAILURE);
+        return result_type_err;
     }
 
     int opt = 1;
     if (setsockopt(global->http_server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         perror("setsockopt");
-        exit(EXIT_FAILURE);
+        return result_type_err;
     }
 
     global->http_address.sin_family = AF_INET;
@@ -184,19 +184,23 @@ void global_init(struct global* global) {
 
     if (bind(global->http_server, (struct sockaddr*)&global->http_address, sizeof(global->http_address)) < 0) {
         perror("Bind failed");
-        exit(EXIT_FAILURE);
+        return result_type_err;
     }
 
     if (listen(global->http_server, 3) < 0) {
         perror("Listen failed");
-        exit(EXIT_FAILURE);
+        return result_type_err;
     }
+    return result_type_ok;
 }
 
 int main() {
     static struct global global;
-    global_init(&global);
-    printf("Server listening on port %d\n", PORT);
+    if(global_init(&global) == result_type_ok) {
+        printf("Server listening on port %d\n", PORT);
+    } else {
+        return 0;
+    }
     global_loop(&global);
     printf("Server stopped.");
     return 0;
