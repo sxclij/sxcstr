@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #define PORT 8080
 #define BUFFER_SIZE (1024 * 1024 * 16)
@@ -19,22 +20,6 @@ enum result_type {
 struct string {
     char* data;
     uint32_t size;
-};
-
-// Global struct containing all necessary buffers and configurations
-struct global {
-    char buf_recv_data[BUFFER_SIZE];
-    char buf_send_data[BUFFER_SIZE];
-    char buf_file_data[BUFFER_SIZE];
-    char buf_path_data[BUFFER_SIZE];
-    struct string buf_recv;
-    struct string buf_send;
-    struct string buf_file;
-    struct string buf_path;
-    int http_server;
-    int http_client;
-    struct sockaddr_in http_address;
-    int http_addrlen;
 };
 
 // String utilities
@@ -187,50 +172,48 @@ enum result_type http_read(struct string* const buf_recv, const int http_client)
 }
 
 // Main server loop
-void global_loop(struct global* const global) {
-    while (1) {
-        global->http_client = accept(global->http_server, (struct sockaddr*)&global->http_address, &global->http_addrlen);
-        if (global->http_client < 0) continue;
+enum result_type server_main() {
+    
+    const int opt = 1;
 
-        if (http_read(&global->buf_recv, global->http_client) == result_type_ok) {
-            http_handle_request(&global->buf_send, global->buf_recv, &global->buf_file, &global->buf_path);
-            send(global->http_client, global->buf_send.data, global->buf_send.size, 0);
+    pthread_t http_thread;
+    pthread_attr_t http_attr;
+    int http_server;
+    int http_client;
+    struct sockaddr_in http_address;
+    int http_addrlen;
+
+    http_server = socket(AF_INET, SOCK_STREAM, 0);
+    if (http_server == 0) return result_type_err;
+
+    if (setsockopt(http_server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) return result_type_err;
+
+    http_address.sin_family = AF_INET;
+    http_address.sin_addr.s_addr = INADDR_ANY;
+    http_address.sin_port = htons(PORT);
+    http_addrlen = sizeof(http_address);
+
+    if (bind(http_server, (struct sockaddr*)&http_address, sizeof(http_address)) < 0) return result_type_err;
+    if (listen(http_server, 3) < 0) return result_type_err;
+
+    while (1) {
+        int http_client = accept(server_socket, (struct sockaddr*)&http_address, &http_addrlen);
+        if (http_client < 0) continue;
+
+        if (http_read(&buf_recv, http_client) == result_type_ok) {
+            pthread_attr_init(&attr);
+            pthread_attr_setstacksize(&attr, STACK_SIZE);
+            pthread_create(&thread, &attr, http_handle_request, NULL);
         }
-        close(global->http_client);
     }
 }
 
-// Global initialization
-enum result_type global_init(struct global* const global) {
-    memset(global, 0, sizeof(struct global));
-    global->buf_recv = string_make(global->buf_recv_data, 0);
-    global->buf_send = string_make(global->buf_send_data, 0);
-    global->buf_file = string_make(global->buf_file_data, 0);
-    global->buf_path = string_make(global->buf_path_data, 0);
-
-    global->http_server = socket(AF_INET, SOCK_STREAM, 0);
-    if (global->http_server == 0) return result_type_err;
-
-    const int opt = 1;
-    if (setsockopt(global->http_server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) return result_type_err;
-
-    global->http_address.sin_family = AF_INET;
-    global->http_address.sin_addr.s_addr = INADDR_ANY;
-    global->http_address.sin_port = htons(PORT);
-    global->http_addrlen = sizeof(global->http_address);
-
-    if (bind(global->http_server, (struct sockaddr*)&global->http_address, sizeof(global->http_address)) < 0) return result_type_err;
-    if (listen(global->http_server, 3) < 0) return result_type_err;
-
-    return result_type_ok;
-}
-
 int main() {
-    static struct global global;
 
-    if (global_init(&global) == result_type_ok) {
-        printf("Server listening on port %d\n", PORT);
-        global_loop(&global);
+    if (server_main(&server) == result_type_ok) {
+        printf("Server ok.\n");
+    } else {
+        printf("Server err.\n");
     }
     return 0;
 }
