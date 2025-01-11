@@ -115,6 +115,7 @@ const char* http_contenttype(const char* const path) {
     if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) return "image/jpeg";
     if (strcmp(ext, ".ico") == 0) return "image/x-icon";
     if (strcmp(ext, ".svg") == 0) return "image/svg+xml";
+    if (strcmp(ext, ".webp") == 0) return "image/webp";
     if (strcmp(ext, ".json") == 0) return "application/json";
     if (strcmp(ext, ".woff") == 0) return "font/woff";
     if (strcmp(ext, ".woff2") == 0) return "font/woff2";
