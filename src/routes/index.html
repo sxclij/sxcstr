@@ -50,6 +50,7 @@
             width: 100%;
             background: var(--card-background-color);
             padding: 0.5rem 1rem;
+            padding-right: 20px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
             z-index: 1000;
             display: flex;
@@ -87,19 +88,10 @@
         main {
             max-width: 85%;
             margin: 5rem auto 0;
-            /* Adjusted margin to accommodate fixed navbar */
             padding: 2rem 1rem;
             background: var(--card-background-color);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             border-radius: 8px;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 2rem;
-            padding-bottom: 1rem;
-            font-size: 0.9rem;
-            color: #e7e7e7;
         }
 
         .hero {
@@ -166,7 +158,6 @@
         .links article h3 {
             font-size: var(--font-size-h3);
             margin-bottom: 0.5rem;
-            /* border-bottom: 1px solid var(--secondary-text-color); */ /* 下線を削除 */
             padding-bottom: 0.2rem;
         }
 
@@ -181,9 +172,14 @@
 
         @media (max-width: 768px) {
             .navbar {
+                display: none;
+            }
+
+            .navbar {
                 flex-direction: column;
                 align-items: flex-start;
                 padding: 0.5rem;
+                padding-right: 0;
             }
 
             .navbar ul {
@@ -198,8 +194,16 @@
             }
 
             main {
-                margin-top: 8rem;
+                margin-top: 2rem;
             }
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem 0;
+            background-color: var(--card-background-color);
+            color: var(--secondary-text-color);
+            margin-top: 2rem;
         }
     </style>
 </head>
@@ -210,8 +214,9 @@
             <a href="/" class="logo" aria-label="sxclijメインサイト">sxclij.com</a>
             <ul>
                 <li><a href="#hero">Home</a></li>
-                <li><a href="#Skills">Skills</a></li>
-                <li><a href="#Projects">Projects</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#skills">Skills</a></li>
+                <li><a href="#works">Works</a></li>
                 <li><a href="#links">Links</a></li>
             </ul>
         </nav>
@@ -223,37 +228,70 @@
             <p>C言語製ホームページ。malloc不使用オーガニック。</p>
         </section>
 
-        <section id="Skills" class="Skills">
-            <h2>スキル</h2>
+        <section id="about" class="skills">
+            <h2>About</h2>
             <div class="skill-list">
                 <div class="skill-item">
-                    <h3>C言語</h3>
-                    <p>一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリを縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。</p>
+                    <h3>所属</h3>
+                    <p>無所属 / 無職</p>
                 </div>
                 <div class="skill-item">
-                    <h3>インフラ</h3>
-                    <p>自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。</p>
+                    <h3>好きな言語</h3>
+                    <p>C / Go / Rust</p>
                 </div>
                 <div class="skill-item">
-                    <h3>Webバックエンド</h3>
-                    <p>個人的にはC++、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。</p>
+                    <h3>趣味</h3>
+                    <p>読書 / 音ゲー / Nostr</p>
                 </div>
                 <div class="skill-item">
-                    <h3>Webフロントエンド</h3>
-                    <p>始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React > Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。</p>
+                    <h3>好きなデータ構造</h3>
+                    <p>Array / Treap / RBtree</p>
+                </div>
+                <div class="skill-item">
+                    <h3>連絡先</h3>
+                    <p>sxclij@じーめいるどっとこむ</p>
                 </div>
             </div>
         </section>
 
-        <section id="Projects" class="Projects">
-            <h2>プロジェクト</h2>
+        <section id="skills" class="skills">
+            <h2>Skills</h2>
             <div class="skill-list">
                 <div class="skill-item">
-                    <h3><a href="https://github.com/sxclij/sxceditor2" target="_blank" rel="noopener noreferrer">テキストエディタ</a></h3>
+                    <h3>C言語</h3>
+                    <p>一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリを縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。
+                    </p>
+                </div>
+                <div class="skill-item">
+                    <h3>インフラ</h3>
+                    <p>自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。
+                    </p>
+                </div>
+                <div class="skill-item">
+                    <h3>Webバックエンド</h3>
+                    <p>個人的にはC++、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。
+                    </p>
+                </div>
+                <div class="skill-item">
+                    <h3>Webフロントエンド</h3>
+                    <p>始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React >
+                        Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="works" class="works">
+            <h2>Works</h2>
+            <div class="skill-list">
+                <div class="skill-item">
+                    <h3><a href="https://github.com/sxclij/sxceditor2" target="_blank"
+                            rel="noopener noreferrer">テキストエディタ</a></h3>
                     <p>C言語を使用して、とてもコンパクトなテキストエディタを開発しています。</p>
                 </div>
                 <div class="skill-item">
-                    <h3><a href="https://github.com/sxclij/sxcscript" target="_blank" rel="noopener noreferrer">自作プログラミング言語</a></h3>
+                    <h3><a href="https://github.com/sxclij/sxcscript" target="_blank"
+                            rel="noopener noreferrer">自作プログラミング言語</a></h3>
                     <p>自作プログラミング言語を設計し、Scratch上で動作する独自のコンパイラやインタプリタの開発を行っています。</p>
                 </div>
             </div>
@@ -262,18 +300,24 @@
         <section id="links" class="links">
             <h2>Links</h2>
             <article>
-                <h3>Links</h3>
+                <h3>Media</h3>
                 <ul class="link-list">
-                    <li><a href="https://github.com/sxclij" target="_blank" rel="noopener noreferrer">GitHub: sxclij</a></li>
-                    <li><a href="https://qiita.com/sxclij" target="_blank" rel="noopener noreferrer">Qiita: sxclij</a></li>
-                    <li><a href="https://note.com/sxclij" target="_blank" rel="noopener noreferrer">note: sxclij</a></li>
-                    <li><a href="https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fsxclij.com%2F" target="_blank" rel="noopener noreferrer">Pagespeed: sxclij.com</a></li>
-                    <li><a href="https://discord.gg/yFtY7ym4DA" target="_blank" rel="noopener noreferrer">Discord: sxclij-server</a></li>
-                    <li><a href="https://nostter.app/sxclij@nostrcheck.me" target="_blank" rel="noopener noreferrer">nostr: sxclij</a></li>
+                    <li><a href="https://github.com/sxclij" target="_blank" rel="noopener noreferrer">GitHub: sxclij</a>
+                    </li>
+                    <li><a href="https://qiita.com/sxclij" target="_blank" rel="noopener noreferrer">Qiita: sxclij</a>
+                    </li>
+                    <li><a href="https://note.com/sxclij" target="_blank" rel="noopener noreferrer">note: sxclij</a>
+                    </li>
+                    <li><a href="https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fsxclij.com%2F" target="_blank"
+                            rel="noopener noreferrer">Pagespeed: sxclij.com</a></li>
+                    <li><a href="https://discord.gg/yFtY7ym4DA" target="_blank" rel="noopener noreferrer">Discord:
+                            sxclij-server</a></li>
+                    <li><a href="https://nostter.app/sxclij@nostrcheck.me" target="_blank"
+                            rel="noopener noreferrer">nostr: sxclij</a></li>
                 </ul>
             </article>
             <article>
-                <h3>daily</h3>
+                <h3>Daily</h3>
                 <ul>
                     <li><a href="/daily/20241231">2024/12/31</a></li>
                     <li><a href="/daily/20250101">2025/01/01</a></li>
