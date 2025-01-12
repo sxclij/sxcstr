@@ -123,6 +123,7 @@ const char* http_contenttype(const char* const path) {
     if (strcmp(ext, ".otf") == 0) return "font/otf";
     if (strcmp(ext, ".mp4") == 0) return "video/mp4";
     if (strcmp(ext, ".webm") == 0) return "video/webm";
+    if (strcmp(ext, ".mov") == 0) return "video/quicktime";
     return "application/octet-stream";
 }
 

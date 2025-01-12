@@ -121,19 +121,19 @@
             margin-bottom: 1rem;
         }
 
-        .skill-list {
+        .box-list {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1rem;
         }
 
-        .skill-item {
+        .box-item {
             background-color: var(--item-background-color);
             padding: 1rem;
             border-radius: 4px;
         }
 
-        .skill-item h3 {
+        .box-item h3 {
             margin-top: 0;
             font-size: var(--font-size-h3);
             border-left: 4px solid var(--accent-color);
@@ -215,6 +215,7 @@
             <ul>
                 <li><a href="#hero">Home</a></li>
                 <li><a href="#about">About</a></li>
+                <li><a href="#certifications">Certifications</a></li>
                 <li><a href="#skills">Skills</a></li>
                 <li><a href="#works">Works</a></li>
                 <li><a href="#links">Links</a></li>
@@ -225,57 +226,66 @@
     <main>
         <section id="hero" class="hero">
             <h1>sxclij.com</h1>
-            <p>C言語製ホームページ。malloc不使用オーガニック。</p>
+            <p>C言語お手製httpサーバ。malloc不使用オーガニック。</p>
         </section>
 
-        <section id="about" class="skills">
+        <section id="about" class="about">
             <h2>About</h2>
-            <div class="skill-list">
-                <div class="skill-item">
+            <div class="box-list">
+                <div class="box-item">
                     <h3>所属</h3>
                     <p>無所属 / 無職</p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>好きな言語</h3>
                     <p>C / Go / Rust</p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>趣味</h3>
                     <p>読書 / 音ゲー / Nostr</p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>好きなデータ構造</h3>
                     <p>Array / Treap / RBtree</p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>連絡先</h3>
                     <p>sxclij@じーめいるどっとこむ</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="certifications" class="certifications">
+            <h2>Certifications</h2>
+            <div class="box-list">
+                <div class="box-item">
+                    <h3>高等学校卒業程度認定試験</h3>
+                    <p>2024/09</p>
                 </div>
             </div>
         </section>
 
         <section id="skills" class="skills">
             <h2>Skills</h2>
-            <div class="skill-list">
-                <div class="skill-item">
+            <div class="box-list">
+                <div class="box-item">
                     <h3>C言語</h3>
                     <p>一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリを縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。
                     </p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>インフラ</h3>
                     <p>自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。
                     </p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>Webバックエンド</h3>
                     <p>個人的にはC++、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。
                     </p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3>Webフロントエンド</h3>
-                    <p>始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React >
-                        Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。
+                    <p>始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React > Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。
                     </p>
                 </div>
             </div>
@@ -283,16 +293,16 @@
 
         <section id="works" class="works">
             <h2>Works</h2>
-            <div class="skill-list">
-                <div class="skill-item">
+            <div class="box-list">
+                <div class="box-item">
                     <h3><a href="https://github.com/sxclij/sxceditor2" target="_blank"
-                            rel="noopener noreferrer">テキストエディタ</a></h3>
-                    <p>C言語を使用して、とてもコンパクトなテキストエディタを開発しています。</p>
+                            rel="noopener noreferrer">お手製テキストエディタ</a></h3>
+                    <p>C言語を使用して、とてもコンパクトなお手製テキストエディタを開発しています。</p>
                 </div>
-                <div class="skill-item">
+                <div class="box-item">
                     <h3><a href="https://github.com/sxclij/sxcscript" target="_blank"
-                            rel="noopener noreferrer">自作プログラミング言語</a></h3>
-                    <p>自作プログラミング言語を設計し、Scratch上で動作する独自のコンパイラやインタプリタの開発を行っています。</p>
+                            rel="noopener noreferrer">お手製プログラミング言語</a></h3>
+                    <p>お手製プログラミング言語を設計し、Scratch上で動作する独自のコンパイラやインタプリタの開発を行っています。</p>
                 </div>
             </div>
         </section>
