@@ -1,2 +1,4 @@
 /node_modules
-/src/routes/mediatest
+/src/routes/media
+.vscode
+.devcontainer
