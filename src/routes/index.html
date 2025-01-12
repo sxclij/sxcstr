@@ -4,119 +4,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="sxclijさんのお手製サイト">
-    <meta name="keywords" content="sxclij">
-    <meta name="author" content="sxclij">
-    <title>sxclij</title>
+    <title>sxclij.com</title>
+    <meta name="description" content="sxclijさんのお手製サイト" />
+    <style>
+        :root {
+            --primary-text-color: #e0e0e0;
+            --secondary-text-color: #bdbdbd;
+            --accent-color: #81c784;
+            --link-color: #64b5f6;
+            --background-color: #121212;
+            --card-background-color: #1e1e1e;
+            --item-background-color: #282828;
+            --font-size-base: 1rem;
+            --font-size-h2: 1.8rem;
+            --font-size-h3: 1.125rem;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            background-color: var(--background-color);
+            color: var(--primary-text-color);
+        }
+
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        a:visited {
+            color: var(--accent-color);
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: var(--card-background-color);
+            padding: 0.5rem 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar .logo {
+            color: var(--primary-text-color);
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .navbar ul {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar li {
+            margin-left: 1rem;
+        }
+
+        .navbar a {
+            color: var(--primary-text-color);
+            font-size: var(--font-size-base);
+            transition: color 0.3s;
+        }
+
+        .navbar a:hover {
+            color: var(--accent-color);
+        }
+
+        main {
+            max-width: 85%;
+            margin: 5rem auto 0;
+            /* Adjusted margin to accommodate fixed navbar */
+            padding: 2rem 1rem;
+            background: var(--card-background-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #e7e7e7;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .hero h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            color: var(--accent-color);
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--secondary-text-color);
+        }
+
+        .skills {
+            margin-bottom: 2rem;
+        }
+
+        .skills h2 {
+            font-size: var(--font-size-h2);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .skill-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .skill-item {
+            background-color: var(--item-background-color);
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+        .skill-item h3 {
+            margin-top: 0;
+            font-size: var(--font-size-h3);
+            border-left: 4px solid var(--accent-color);
+            padding-left: 0.5rem;
+        }
+
+        .links {
+            margin-bottom: 2rem;
+        }
+
+        .links h2 {
+            font-size: var(--font-size-h2);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .links article {
+            margin-bottom: 1.5rem;
+        }
+
+        .links article h3 {
+            font-size: var(--font-size-h3);
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--secondary-text-color);
+            padding-bottom: 0.2rem;
+        }
+
+        .links ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .links li {
+            margin-bottom: 0.3rem;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 0.5rem;
+            }
+
+            .navbar ul {
+                margin-top: 0.5rem;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .navbar li {
+                margin-left: 0;
+                margin-bottom: 0.5rem;
+            }
+
+            main {
+                margin-top: 8rem;
+                /* Adjust margin for smaller screens */
+            }
+        }
+    </style>
 </head>
-
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        background-color: #121212;
-        color: #f0f0f0;
-        line-height: 1.6;
-        padding-bottom: 1rem;
-    }
-
-    .navbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #333;
-        padding: 1rem;
-    }
-
-    .navbar a.logo {
-        font-weight: bold;
-    }
-
-    .navbar ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        gap: 1.5rem;
-    }
-
-    .navbar a {
-        color: #eee;
-        text-decoration: none;
-        padding: 0.5rem 1rem;
-        border-radius: 0.3rem;
-        transition: background-color 0.3s ease;
-    }
-
-    .navbar a:hover {
-        background-color: #555;
-    }
-
-    .hero {
-        text-align: center;
-        padding: 3rem 2rem;
-        background-color: #212121;
-        border-bottom: 1px solid #444;
-    }
-
-    .hero h1 {
-        margin-bottom: 1.5rem;
-        font-size: 2.5rem;
-    }
-
-    .hero p {
-        font-size: 1.1rem;
-        color: #ccc;
-    }
-
-    .links {
-        padding: 2rem;
-        margin: 2rem auto;
-        max-width: 800px;
-    }
-
-    .links h2 {
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid #444;
-        padding-bottom: 0.5rem;
-    }
-
-    .links article {
-        margin-bottom: 1.5rem;
-    }
-
-    .links article h3 {
-        margin-bottom: 0.8rem;
-        font-size: 1.3rem;
-    }
-
-    .links ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .links li {
-        margin-bottom: 0.5rem;
-    }
-
-    .links li a {
-        color: #bbb;
-        text-decoration: none;
-        transition: color 0.3s ease;
-    }
-
-    .links li a:hover {
-        color: #fff;
-    }
-
-    footer {
-        text-align: center;
-        background-color: #333;
-        color: #eee;
-        padding: 1rem;
-        max-width: 100%;
-    }
-</style>
 
 <body>
     <header>
@@ -124,6 +211,7 @@
             <a href="/" class="logo" aria-label="sxclijメインサイト">sxclij.com</a>
             <ul>
                 <li><a href="#hero">Home</a></li>
+                <li><a href="#skills">skills</a></li>
                 <li><a href="#links">Links</a></li>
             </ul>
         </nav>
@@ -133,6 +221,18 @@
         <section id="hero" class="hero">
             <h1>sxclij.com</h1>
             <p>C言語製ホームページ。malloc不使用オーガニック。</p>
+        </section>
+
+        <section id="skills" class="skills">
+            <h2>スキル</h2>
+            <div class="skill-list">
+            </div>
+        </section>
+
+        <section id="projects" class="projects">
+            <h2>プロジェクト</h2>
+            <div class="project-list">
+            </div>
         </section>
 
         <section id="links" class="links">
@@ -152,12 +252,154 @@
                     <li><a href="/daily/20250112">2025/01/12</a></li>
                 </ul>
             </article>
+            <article>
+                <h3>Links</h3>
+                <ul class="link-list">
+                </ul>
+            </article>
         </section>
     </main>
 
     <footer>
         <p>© 2024 sxclij. All Rights Reserved.</p>
     </footer>
+
+    <script>
+        const profile = {
+            icon: "/icon.svg",
+            name: "sxclij",
+            info: [
+                {
+                    label: "所属",
+                    value: "無所属 / 無職",
+                },
+                {
+                    label: "好きな言語",
+                    value: "C / Go / Rust",
+                },
+                {
+                    label: "趣味",
+                    value: "読書 / 音ゲー / Nostr",
+                },
+                {
+                    label: "好きなデータ構造",
+                    value: "Array / Treap / RBtree",
+                },
+                {
+                    label: "連絡先",
+                    value: "sxclij@gmail.com",
+                },
+            ],
+        };
+        const skills = [
+            {
+                title: "C言語",
+                description:
+                    "一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリを縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。",
+            },
+            {
+                title: "インフラ",
+                description:
+                    "自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。",
+            },
+            {
+                title: "Webバックエンド",
+                description:
+                    "個人的にはC++、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。",
+            },
+            {
+                title: "Webフロントエンド",
+                description:
+                    "始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React > Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。",
+            },
+        ];
+        const projects = [
+            {
+                name: "テキストエディタ",
+                link: "https://github.com/sxclij/sxceditor2",
+                description:
+                    "C言語を使用して、とてもコンパクトなテキストエディタを開発しています。",
+            },
+            {
+                name: "自作プログラミング言語",
+                link: "https://github.com/sxclij/sxcscript",
+                description:
+                    "自作プログラミング言語を設計し、Scratch上で動作する独自のコンパイラやインタプリタの開発を行っています。",
+            },
+        ];
+        const links = [
+            {
+                name: "GitHub: sxclij",
+                url: "https://github.com/sxclij",
+            },
+            {
+                name: "Qiita: sxclij",
+                url: "https://qiita.com/sxclij",
+            },
+            {
+                name: "note: sxclij",
+                url: "https://note.com/sxclij",
+            },
+            {
+                name: "Pagespeed: sxclij.com",
+                url: "https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fsxclij.com%2F",
+            },
+            {
+                name: "Discord: sxclij-server",
+                url: "https://discord.gg/yFtY7ym4DA",
+            },
+            {
+                name: "nostr: sxclij",
+                url: "https://nostter.app/sxclij@nostrcheck.me",
+            },
+        ];
+
+        // skillsセクションの動的な情報表示
+        const skillListDiv = document.querySelector('#skills .skill-list');
+        skills.forEach(skill => {
+            const skillItemDiv = document.createElement('div');
+            skillItemDiv.classList.add('skill-item');
+            const h3 = document.createElement('h3');
+            h3.textContent = skill.title;
+            const p = document.createElement('p');
+            p.textContent = skill.description;
+            skillItemDiv.appendChild(h3);
+            skillItemDiv.appendChild(p);
+            skillListDiv.appendChild(skillItemDiv);
+        });
+
+        // projectsセクションの動的な情報表示
+        const projectListDiv = document.querySelector('#projects .project-list');
+        projects.forEach(project => {
+            const projectItemDiv = document.createElement('div');
+            projectItemDiv.classList.add('project-item');
+            const h3 = document.createElement('h3');
+            const a = document.createElement('a');
+            a.href = project.link;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = project.name;
+            h3.appendChild(a);
+            const p = document.createElement('p');
+            p.textContent = project.description;
+            projectItemDiv.appendChild(h3);
+            projectItemDiv.appendChild(p);
+            projectListDiv.appendChild(projectItemDiv);
+        });
+
+        // linksセクションの動的な情報表示
+        const linkListUl = document.querySelector('#links .link-list');
+        links.forEach(link => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = link.url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = link.name;
+            li.appendChild(a);
+            linkListUl.appendChild(li);
+        });
+    </script>
 </body>
 
 </html>
