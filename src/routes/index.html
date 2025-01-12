@@ -118,11 +118,11 @@
             color: var(--secondary-text-color);
         }
 
-        .skills {
+        .Skills {
             margin-bottom: 2rem;
         }
 
-        .skills h2 {
+        h2 {
             font-size: var(--font-size-h2);
             border-bottom: 2px solid var(--accent-color);
             padding-bottom: 0.3rem;
@@ -166,7 +166,7 @@
         .links article h3 {
             font-size: var(--font-size-h3);
             margin-bottom: 0.5rem;
-            border-bottom: 1px solid var(--secondary-text-color);
+            /* border-bottom: 1px solid var(--secondary-text-color); */ /* 下線を削除 */
             padding-bottom: 0.2rem;
         }
 
@@ -199,7 +199,6 @@
 
             main {
                 margin-top: 8rem;
-                /* Adjust margin for smaller screens */
             }
         }
     </style>
@@ -211,7 +210,8 @@
             <a href="/" class="logo" aria-label="sxclijメインサイト">sxclij.com</a>
             <ul>
                 <li><a href="#hero">Home</a></li>
-                <li><a href="#skills">skills</a></li>
+                <li><a href="#Skills">Skills</a></li>
+                <li><a href="#Projects">Projects</a></li>
                 <li><a href="#links">Links</a></li>
             </ul>
         </nav>
@@ -223,20 +223,55 @@
             <p>C言語製ホームページ。malloc不使用オーガニック。</p>
         </section>
 
-        <section id="skills" class="skills">
+        <section id="Skills" class="Skills">
             <h2>スキル</h2>
             <div class="skill-list">
+                <div class="skill-item">
+                    <h3>C言語</h3>
+                    <p>一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリを縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。</p>
+                </div>
+                <div class="skill-item">
+                    <h3>インフラ</h3>
+                    <p>自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。</p>
+                </div>
+                <div class="skill-item">
+                    <h3>Webバックエンド</h3>
+                    <p>個人的にはC++、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。</p>
+                </div>
+                <div class="skill-item">
+                    <h3>Webフロントエンド</h3>
+                    <p>始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React > Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。</p>
+                </div>
             </div>
         </section>
 
-        <section id="projects" class="projects">
+        <section id="Projects" class="Projects">
             <h2>プロジェクト</h2>
-            <div class="project-list">
+            <div class="skill-list">
+                <div class="skill-item">
+                    <h3><a href="https://github.com/sxclij/sxceditor2" target="_blank" rel="noopener noreferrer">テキストエディタ</a></h3>
+                    <p>C言語を使用して、とてもコンパクトなテキストエディタを開発しています。</p>
+                </div>
+                <div class="skill-item">
+                    <h3><a href="https://github.com/sxclij/sxcscript" target="_blank" rel="noopener noreferrer">自作プログラミング言語</a></h3>
+                    <p>自作プログラミング言語を設計し、Scratch上で動作する独自のコンパイラやインタプリタの開発を行っています。</p>
+                </div>
             </div>
         </section>
 
         <section id="links" class="links">
             <h2>Links</h2>
+            <article>
+                <h3>Links</h3>
+                <ul class="link-list">
+                    <li><a href="https://github.com/sxclij" target="_blank" rel="noopener noreferrer">GitHub: sxclij</a></li>
+                    <li><a href="https://qiita.com/sxclij" target="_blank" rel="noopener noreferrer">Qiita: sxclij</a></li>
+                    <li><a href="https://note.com/sxclij" target="_blank" rel="noopener noreferrer">note: sxclij</a></li>
+                    <li><a href="https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fsxclij.com%2F" target="_blank" rel="noopener noreferrer">Pagespeed: sxclij.com</a></li>
+                    <li><a href="https://discord.gg/yFtY7ym4DA" target="_blank" rel="noopener noreferrer">Discord: sxclij-server</a></li>
+                    <li><a href="https://nostter.app/sxclij@nostrcheck.me" target="_blank" rel="noopener noreferrer">nostr: sxclij</a></li>
+                </ul>
+            </article>
             <article>
                 <h3>daily</h3>
                 <ul>
@@ -252,154 +287,12 @@
                     <li><a href="/daily/20250112">2025/01/12</a></li>
                 </ul>
             </article>
-            <article>
-                <h3>Links</h3>
-                <ul class="link-list">
-                </ul>
-            </article>
         </section>
     </main>
 
     <footer>
         <p>© 2024 sxclij. All Rights Reserved.</p>
     </footer>
-
-    <script>
-        const profile = {
-            icon: "/icon.svg",
-            name: "sxclij",
-            info: [
-                {
-                    label: "所属",
-                    value: "無所属 / 無職",
-                },
-                {
-                    label: "好きな言語",
-                    value: "C / Go / Rust",
-                },
-                {
-                    label: "趣味",
-                    value: "読書 / 音ゲー / Nostr",
-                },
-                {
-                    label: "好きなデータ構造",
-                    value: "Array / Treap / RBtree",
-                },
-                {
-                    label: "連絡先",
-                    value: "sxclij@gmail.com",
-                },
-            ],
-        };
-        const skills = [
-            {
-                title: "C言語",
-                description:
-                    "一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリを縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。",
-            },
-            {
-                title: "インフラ",
-                description:
-                    "自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。",
-            },
-            {
-                title: "Webバックエンド",
-                description:
-                    "個人的にはC++、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。",
-            },
-            {
-                title: "Webフロントエンド",
-                description:
-                    "始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React > Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。",
-            },
-        ];
-        const projects = [
-            {
-                name: "テキストエディタ",
-                link: "https://github.com/sxclij/sxceditor2",
-                description:
-                    "C言語を使用して、とてもコンパクトなテキストエディタを開発しています。",
-            },
-            {
-                name: "自作プログラミング言語",
-                link: "https://github.com/sxclij/sxcscript",
-                description:
-                    "自作プログラミング言語を設計し、Scratch上で動作する独自のコンパイラやインタプリタの開発を行っています。",
-            },
-        ];
-        const links = [
-            {
-                name: "GitHub: sxclij",
-                url: "https://github.com/sxclij",
-            },
-            {
-                name: "Qiita: sxclij",
-                url: "https://qiita.com/sxclij",
-            },
-            {
-                name: "note: sxclij",
-                url: "https://note.com/sxclij",
-            },
-            {
-                name: "Pagespeed: sxclij.com",
-                url: "https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fsxclij.com%2F",
-            },
-            {
-                name: "Discord: sxclij-server",
-                url: "https://discord.gg/yFtY7ym4DA",
-            },
-            {
-                name: "nostr: sxclij",
-                url: "https://nostter.app/sxclij@nostrcheck.me",
-            },
-        ];
-
-        // skillsセクションの動的な情報表示
-        const skillListDiv = document.querySelector('#skills .skill-list');
-        skills.forEach(skill => {
-            const skillItemDiv = document.createElement('div');
-            skillItemDiv.classList.add('skill-item');
-            const h3 = document.createElement('h3');
-            h3.textContent = skill.title;
-            const p = document.createElement('p');
-            p.textContent = skill.description;
-            skillItemDiv.appendChild(h3);
-            skillItemDiv.appendChild(p);
-            skillListDiv.appendChild(skillItemDiv);
-        });
-
-        // projectsセクションの動的な情報表示
-        const projectListDiv = document.querySelector('#projects .project-list');
-        projects.forEach(project => {
-            const projectItemDiv = document.createElement('div');
-            projectItemDiv.classList.add('project-item');
-            const h3 = document.createElement('h3');
-            const a = document.createElement('a');
-            a.href = project.link;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.textContent = project.name;
-            h3.appendChild(a);
-            const p = document.createElement('p');
-            p.textContent = project.description;
-            projectItemDiv.appendChild(h3);
-            projectItemDiv.appendChild(p);
-            projectListDiv.appendChild(projectItemDiv);
-        });
-
-        // linksセクションの動的な情報表示
-        const linkListUl = document.querySelector('#links .link-list');
-        links.forEach(link => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = link.url;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.textContent = link.name;
-            li.appendChild(a);
-            linkListUl.appendChild(li);
-        });
-    </script>
 </body>
 
 </html>
