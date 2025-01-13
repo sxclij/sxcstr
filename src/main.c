@@ -56,47 +56,79 @@ enum result file_read(struct vec* dst, struct vec* path) {
     fclose(fp);
     return result_ok;
 }
+enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
+    char file_data[BUFFER_SIZE];
+    char path_data[BUFFER_SIZE];
+    struct vec file_vec = (struct vec){.data = file_data, .size = 0};
+    struct vec path_vec = (struct vec){.data = path_data, .size = 0};
+    const char* content_type;
+    char* path_start = strstr(recv_vec->data, "/");
+    char* path_end = strstr(path_start, " ");
+    char* path_ext;
+    uint32_t path_size = path_end - path_start;
+    vec_cpy_str(&path_vec, "./routes");
+    if(memcmp(path_start, "/", 1) == 0 && path_size == 1) {
+        vec_cat_str(&path_vec, "/index.html");
+    } else if(memcmp(path_start, "/favicon.ico", 12) == 0 && path_size == 12) {
+        vec_cat_str(&path_vec, "/favicon.svg");
+    } else {
+        vec_cat(&path_vec, (struct string){.data = path_start, .size = path_size});
+    }
+    vec_tostr(&path_vec);
+    path_ext = strrchr(path_vec.data, '.');
+    if(path_ext[1] == '/') {
+        vec_cat_str(&path_vec, ".html");
+    }
+    vec_tostr(&path_vec);
+    char* ext = strrchr(path_vec.data, '.');
+    if (!ext) {
+        content_type = "application/octet-stream";
+    }
+    if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) content_type = "text/html";
+    else if (strcmp(ext, ".txt") == 0) content_type = "text/plain";
+    else if (strcmp(ext, ".xml") == 0) content_type = "application/xml";
+    else if (strcmp(ext, ".css") == 0) content_type = "text/css";
+    else if (strcmp(ext, ".js") == 0) content_type = "application/javascript";
+    else if (strcmp(ext, ".png") == 0) content_type = "image/png";
+    else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) content_type = "image/jpeg";
+    else if (strcmp(ext, ".ico") == 0) content_type = "image/x-icon";
+    else if (strcmp(ext, ".svg") == 0) content_type = "image/svg+xml";
+    else if (strcmp(ext, ".webp") == 0) content_type = "image/webp";
+    else if (strcmp(ext, ".json") == 0) content_type = "application/json";
+    else if (strcmp(ext, ".woff") == 0) content_type = "font/woff";
+    else if (strcmp(ext, ".woff2") == 0) content_type = "font/woff2";
+    else if (strcmp(ext, ".ttf") == 0) content_type = "font/ttf";
+    else if (strcmp(ext, ".otf") == 0) content_type = "font/otf";
+    else if (strcmp(ext, ".mp4") == 0) content_type = "video/mp4";
+    else if (strcmp(ext, ".webm") == 0) content_type = "video/webm";
+    else if (strcmp(ext, ".mov") == 0) content_type = "video/quicktime";
+    else {
+        content_type = "application/octet-stream";
+    }
+    if(file_read(&file_vec, &path_vec) == result_err) {
+        printf("file_read %s\n", path_vec.data);
+        return result_err;
+    }
+    send_vec->size = sprintf(send_vec->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, file_vec.size);
+    memcpy(send_vec->data + send_vec->size, file_vec.data, file_vec.size);
+    send_vec->size += file_vec.size;
+}
 enum result handle(int client_socket) {
     char send_data[BUFFER_SIZE];
     char recv_data[BUFFER_SIZE];
-    char file_data[BUFFER_SIZE];
-    char path_data[BUFFER_SIZE];
     struct vec send_vec = (struct vec){.data = send_data, .size = 0};
     struct vec recv_vec = (struct vec){.data = recv_data, .size = 0};
-    struct vec file_vec = (struct vec){.data = file_data, .size = 0};
-    struct vec path_vec = (struct vec){.data = path_data, .size = 0};
-    const char* content_type = "text/html";
     int bytes_received = recv(client_socket, recv_vec.data, BUFFER_SIZE, 0);
     if (bytes_received == -1) {
         printf("recv\n");
-        return result_err;
+        return result_ok;
     }
     recv_vec.size = bytes_received;
     if(memcmp(recv_vec.data, "GET ", 4) == 0) {
-        char* path_start = strstr(recv_vec.data, "/");
-        char* path_end = strstr(path_start, " ");
-        char* path_ext;
-        uint32_t path_size = path_end - path_start;
-        vec_cpy_str(&path_vec, "./routes");
-        if(memcmp(path_start, "/", 1) == 0 && path_size == 1) {
-            vec_cat_str(&path_vec, "/index.html");
-        } else if(memcmp(path_start, "/favicon.ico", 12) == 0 && path_size == 12) {
-            vec_cat_str(&path_vec, "/favicon.svg");
-        } else {
-            vec_cat(&path_vec, (struct string){.data = path_start, .size = path_size});
-        }
-        vec_tostr(&path_vec);
-        char* ext = strrchr(path_vec.data, '.');
-        if(ext[1] == '/') {
-            vec_cat_str(&path_vec, ".html");
-        }
-        if(file_read(&file_vec, &path_vec) == result_err) {
-            printf("file_read %s\n", path_vec.data);
+        if(handle_get(&send_vec, &recv_vec) == result_err) {
+            printf("handle_get\n");
             return result_ok;
         }
-        send_vec.size = sprintf(send_vec.data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, file_vec.size);
-        memcpy(send_vec.data + send_vec.size, file_vec.data, file_vec.size);
-        send_vec.size += file_vec.size;
         send(client_socket, send_vec.data, send_vec.size, 0);
     }
     return result_ok;
