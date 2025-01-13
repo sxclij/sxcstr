@@ -72,4 +72,10 @@
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
+    <url>
+        <loc>https://sxclij.com/daily/20250113</loc>
+        <lastmod>2025-01-13</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
 </urlset>
