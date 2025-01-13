@@ -38,41 +38,41 @@ struct global {
 };
 
 // String utilities
-const struct string string_make(char* const data, const uint32_t size) {
-    return (const struct string){.data = data, .size = size};
+struct string string_make(char* data, uint32_t size) {
+    return (struct string){.data = data, .size = size};
 }
 
-const struct string string_make_str(char* const data) {
+struct string string_make_str(char* data) {
     return string_make(data, strlen(data));
 }
 
-void string_clear(struct string* const dst) {
+void string_clear(struct string* dst) {
     dst->size = 0;
 }
 
-void string_cpy(struct string* const dst, const struct string src) {
+void string_cpy(struct string* dst, struct string src) {
     memcpy(dst->data, src.data, src.size);
     dst->size = src.size;
 }
 
-void string_cpy_str(struct string* const dst, const char* const src) {
+void string_cpy_str(struct string* dst, char* src) {
     string_cpy(dst, string_make((char*)src, strlen(src)));
 }
 
-void string_cat(struct string* const dst, const struct string src) {
+void string_cat(struct string* dst, struct string src) {
     memcpy(dst->data + dst->size, src.data, src.size);
     dst->size += src.size;
 }
 
-void string_cat_str(struct string* const dst, const char* const src) {
+void string_cat_str(struct string* dst, char* src) {
     string_cat(dst, string_make((char*)src, strlen(src)));
 }
 
-void string_tostr(struct string* const dst) {
+void string_tostr(struct string* dst) {
     dst->data[dst->size] = '\0';
 }
 
-int string_cmp(const struct string s1, const struct string s2) {
+int string_cmp(struct string s1, struct string s2) {
     if (s1.size == s2.size) {
         return memcmp(s1.data, s2.data, s1.size);
     } else {
@@ -80,13 +80,13 @@ int string_cmp(const struct string s1, const struct string s2) {
     }
 }
 
-int string_cmp_str(const struct string s1, const char* const s2) {
+int string_cmp_str(struct string s1, char* s2) {
     return string_cmp(s1, string_make((char*)s2, strlen(s2)));
 }
 
 // File read utility
-enum result_type file_read(struct string* const dst, const char* const path) {
-    FILE* const fp = fopen(path, "r");
+enum result_type file_read(struct string* dst, char* path) {
+    FILE* fp = fopen(path, "r");
     if (!fp) {
         printf("Error opening file: %s\n", path);
         dst->size = 0;
@@ -101,8 +101,8 @@ enum result_type file_read(struct string* const dst, const char* const path) {
 }
 
 // Determine HTTP content type
-const char* http_contenttype(const char* const path) {
-    const char* const ext = strrchr(path, '.');
+char* http_contenttype(char* path) {
+    char* ext = strrchr(path, '.');
     if (!ext) {
         return "application/octet-stream";
     }
@@ -128,18 +128,18 @@ const char* http_contenttype(const char* const path) {
 }
 
 // HTTP response finalization
-void http_response_finalize(struct string* const buf_send, const struct string body, const char* const content_type) {
+void http_response_finalize(struct string* buf_send, struct string body, char* content_type) {
     buf_send->size = sprintf(buf_send->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, body.size);
     memcpy(buf_send->data + buf_send->size, body.data, body.size);
     buf_send->size += body.size;
 }
 
 // HTTP GET request handler
-void http_handle_get(struct string* const buf_file, struct string* const buf_path, const char** const contenttype, const struct string buf_recv) {
-    const char* const path_start = strstr(buf_recv.data, "/");
-    const char* const path_end = strstr(path_start, " ");
-    const int path_size = path_end - path_start;
-    const struct string path_string = string_make((char*)path_start, path_size);
+void http_handle_get(struct string* buf_file, struct string* buf_path, char** contenttype, struct string buf_recv) {
+    char* path_start = strstr(buf_recv.data, "/");
+    char* path_end = strstr(path_start, " ");
+    int path_size = path_end - path_start;
+    struct string path_string = string_make((char*)path_start, path_size);
 
     if (string_cmp_str(path_string, "/") == 0) {
         string_cpy_str(buf_path, "./routes/index");
@@ -166,8 +166,8 @@ void http_handle_get(struct string* const buf_file, struct string* const buf_pat
 }
 
 // HTTP request handler
-void http_handle_request(struct string* const buf_send, const struct string buf_recv, struct string* const buf_file, struct string* const buf_path) {
-    const char* contenttype = "text/html";
+void http_handle_request(struct string* buf_send, struct string buf_recv, struct string* buf_file, struct string* buf_path) {
+    char* contenttype = "text/html";
 
     if (strncmp(buf_recv.data, "GET", 3) == 0) {
         http_handle_get(buf_file, buf_path, &contenttype, buf_recv);
@@ -179,8 +179,8 @@ void http_handle_request(struct string* const buf_send, const struct string buf_
 }
 
 // Read HTTP request
-enum result_type http_read(struct string* const buf_recv, const int http_client) {
-    const int bytes_read = read(http_client, buf_recv->data, BUFFER_SIZE);
+enum result_type http_read(struct string* buf_recv, int http_client) {
+    int bytes_read = read(http_client, buf_recv->data, BUFFER_SIZE);
     if (bytes_read <= 0) {
         return result_type_err;
     }
@@ -189,7 +189,7 @@ enum result_type http_read(struct string* const buf_recv, const int http_client)
 }
 
 // Main server loop
-void global_loop(struct global* const global) {
+void global_loop(struct global* global) {
     while (1) {
         global->http_client = accept(global->http_server, (struct sockaddr*)&global->http_address, &global->http_addrlen);
         if (global->http_client < 0) continue;
@@ -203,7 +203,7 @@ void global_loop(struct global* const global) {
 }
 
 // Global initialization
-enum result_type global_init(struct global* const global) {
+enum result_type global_init(struct global* global) {
     memset(global, 0, sizeof(struct global));
     global->buf_recv = string_make(global->buf_recv_data, 0);
     global->buf_send = string_make(global->buf_send_data, 0);
@@ -213,7 +213,7 @@ enum result_type global_init(struct global* const global) {
     global->http_server = socket(AF_INET, SOCK_STREAM, 0);
     if (global->http_server == 0) return result_type_err;
 
-    const int opt = 1;
+    int opt = 1;
     if (setsockopt(global->http_server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) return result_type_err;
 
     global->http_address.sin_family = AF_INET;
