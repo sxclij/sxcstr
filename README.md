@@ -7,6 +7,8 @@ This project implements a simple HTTP server written in C. The server can handle
 
 ## Features
 
+- The program does not use `malloc`, ensuring no memory leaks.
+- It relies solely on standard libraries, making it easy to compile.
 - Handles basic HTTP `GET` requests.
 - Serves static files from the `./routes` directory.
 - Automatically assigns appropriate `Content-Type` headers based on file extensions.
