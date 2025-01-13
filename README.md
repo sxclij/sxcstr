@@ -1,6 +1,3 @@
-Here’s a `ReadMe.md` file for the provided C server code:
-
-```markdown
 # Simple HTTP Server in C
 
 ## Overview
@@ -109,6 +106,3 @@ This project is licensed under the MIT License. See `LICENSE` for details.
 
 - Inspired by minimal HTTP server examples in C.
 - Designed for simplicity and educational purposes.
-```
-
-Let me know if you'd like modifications or additions!
