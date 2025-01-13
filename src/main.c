@@ -21,46 +21,16 @@ struct vec {
     uint32_t size;
 };
 
-enum result http(struct global* global) {
+enum result loop(int server_socket, struct sockaddr_in address) {
     
     char recv_data[BUFFER_SIZE];
     char send_data[BUFFER_SIZE];
     struct vec recv_vec = (struct vec){.data = recv_data, .size = 0};
     struct vec send_vec = (struct vec){.data = send_data, .size = 0};
-
-    int server_socket;
-    int client_socket;
-    struct sockaddr_in server_address;
-    int server_address_length;
-    int option = 1;
-
-    server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket == 0) {
-        printf("socket\n");
-        return result_err;
-    }
-
-    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &option, sizeof(option))) {
-        printf("setsockopt\n");
-        return result_err;
-    }
-
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
-    server_address_length = sizeof(server_address);
-
-    if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
-        printf("bind\n");
-        return result_err;
-    }
-    if (listen(server_socket, 3) < 0) {
-        printf("listen\n");
-        return result_err;
-    }
+    int address_length = sizeof(address);
 
     while (1) {
-        client_socket = accept(server_socket, (struct sockaddr*)&server_address, &server_address_length);
+        client_socket = accept(server_socket, (struct sockaddr*)address, &address_length);
         if (client_socket < 0) {
             continue;
         }
@@ -71,11 +41,16 @@ enum result http(struct global* global) {
         close(client_socket);
     }
 }
-enum result init() {
+enum result deinit(int server_socket) {
+    close(server_socket);
+    return result_ok;
+}
+enum result init(int* server_socket, struct sockaddr_in* address) {
 
     const rlim_t kstacksize = RLIMIT_SIZE;
     struct rlimit rl;
     int result;
+    int option = 1;
 
     result = getrlimit(RLIMIT_STACK, &rl);
     if (result != 0) {
@@ -92,16 +67,46 @@ enum result init() {
         printf("setrlimit\n");
         return result_err;
     }
+
+    *server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (*server_socket == 0) {
+        printf("socket\n");
+        return result_err;
+    }
+
+    if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &option, sizeof(option))) {
+        printf("setsockopt\n");
+        return result_err;
+    }
+
+    address->sin_family = AF_INET;
+    address->sin_addr.s_addr = INADDR_ANY;
+    address->sin_port = htons(PORT);
+
+    if (bind(*server_socket, (struct sockaddr*)address, sizeof(address)) < 0) {
+        printf("bind\n");
+        return result_err;
+    }
+    if (listen(*server_socket, 3) < 0) {
+        printf("listen\n");
+        return result_err;
+    }
+
     return result_ok;
 }
 
 int main() {
-    if(init() == result_err) {
+    int server_socket;
+    struct sockaddr_in address;
+    if(init(&server_socket, &address) == result_err) {
         printf("init\n");
         return 0;
     }
-    if(http() == result_err) {
-        printf("http\n");
+    if(loop(server_socket, address) == result_err) {
+        printf("loop\n");
+    }
+    if(deinit(server_socket) == result_err) {
+        printf("deinit\n");
         return 0;
     }
     return 0;
