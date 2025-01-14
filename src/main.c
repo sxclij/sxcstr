@@ -143,7 +143,7 @@ enum result handle(int client_socket) {
     recv_vec.size = bytes_received;
     if(memcmp(recv_vec.data, "GET ", 4) == 0) {
         if(handle_get(&send_vec, &recv_vec) == result_err) {
-            printf("handle_get\n");
+            printf("handle_get\n\n");
             return result_ok;
         }
         send(client_socket, send_vec.data, send_vec.size, 0);
@@ -218,14 +218,14 @@ int main() {
     int server_socket;
     struct sockaddr_in address;
     if(init(&server_socket, &address) == result_err) {
-        printf("init\n");
+        printf("init\n\n");
         return 0;
     }
     if(loop(server_socket, &address) == result_err) {
-        printf("loop\n");
+        printf("loop\n\n");
     }
     if(deinit(server_socket) == result_err) {
-        printf("deinit\n");
+        printf("deinit\n\n");
     }
     return 0;
 }
