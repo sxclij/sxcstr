@@ -1,110 +1,87 @@
-# Simple HTTP Server in C
+# README
 
 ## Overview
 
-This code was created for [sxclij.com](https://sxclij.com).
-This project implements a simple HTTP server written in C. The server can handle basic `GET` requests and serves files based on the requested path. It supports multiple MIME types and uses a custom string manipulation library for efficient memory management.
+This project implements a minimal HTTP server in C with the following constraints:
+- **No Global Variables:** Ensures all state is handled locally, improving modularity and testability.
+- **Single Thread:** Operates in a single-threaded environment, avoiding complexities of concurrency.
+- **Standard Library Only:** Relies solely on the C standard library for portability and simplicity.
+- **No Dynamic Memory Allocation:** Avoids runtime memory allocation to ensure predictability and reduce potential memory management issues.
 
 ## Features
+- Serves static files from a predefined directory.
+- Supports common MIME types (e.g., HTML, CSS, JavaScript, images).
+- Handles HTTP `GET` requests.
+- Customizable stack size using `setrlimit`.
 
-- The program does not use `malloc`, ensuring no memory leaks.
-- It relies solely on standard libraries, making it easy to compile.
-- Handles basic HTTP `GET` requests.
-- Serves static files from the `./routes` directory.
-- Automatically assigns appropriate `Content-Type` headers based on file extensions.
-- Responds with a default page (`index.html`) for requests to `/`.
-- Logs errors when files cannot be found.
-- Supports the following MIME types:
-  - `text/html`, `text/plain`, `application/json`, and many more.
-  - Image formats like `image/png`, `image/jpeg`, `image/svg+xml`, and `image/webp`.
-  - Video formats like `video/mp4` and `video/webm`.
-  - Font formats like `font/woff` and `font/ttf`.
+## Dependencies
+- A C99-compatible compiler.
+- Linux environment for sockets and file system interactions.
+
+## Build Instructions
+1. Clone this repository:
+   ```bash
+   git clone <repository_url>
+   cd <repository_name>/src
+   ```
+2. Compile the code using `gcc`:
+   ```bash
+   gcc -o main main.c
+   ```
 
 ## Usage
+1. Run the server:
+   ```bash
+   ./main
+   ```
+2. Access the server at `http://localhost:8080` using a web browser or a tool like `curl`.
 
-### Prerequisites
+## Code Structure
+### Main Components
+1. **`init` Function:**
+   - Sets up the server socket and stack size.
+   - Binds the server to the specified port.
 
-- A C compiler (e.g., GCC).
-- Basic knowledge of networking and file handling in C.
+2. **`loop` Function:**
+   - Listens for incoming client connections.
+   - Processes HTTP requests and sends appropriate responses.
 
-### Building the Project
+3. **`handle_get` Function:**
+   - Parses the HTTP `GET` request.
+   - Determines the requested file and MIME type.
+   - Reads the file and constructs the HTTP response.
 
-Compile the project using the following command:
+4. **`deinit` Function:**
+   - Closes the server socket and performs cleanup.
 
-```bash
-gcc -o main main.c
-```
+### Helper Structures
+- **`struct string`:** Represents an immutable string.
+- **`struct vec`:** Represents a mutable string buffer for constructing responses.
 
-### Running the Server
+### Memory Management
+- All buffers are stack-allocated with predefined sizes.
+- No calls to `malloc` or `free` are used.
 
-Run the server with:
+### Constraints and Limitations
+- The server does not support HTTP methods other than `GET`.
+- File paths and responses are limited to a maximum size of 16 MB (configurable via `BUFFER_SIZE`).
+- Designed for local development and testing; not suitable for production use.
 
-```bash
-./main
-```
+## Extending the Server
+1. **Adding MIME Types:**
+   - Update the `handle_get` function with additional file extensions and MIME types.
 
-By default, the server listens on port `8080`. You can connect to it via a web browser or tools like `curl`:
+2. **Supporting More Methods:**
+   - Add functions to handle methods like `POST` or `PUT`.
 
-```bash
-curl http://localhost:8080
-```
-
-### Directory Structure
-
-The server expects static files to be located in the `./routes` directory. For example:
-
-- `./routes/index.html` - Default page served for `/`.
-- `./routes/favicon.svg` - Favicon served for `/favicon.ico`.
-- `./routes/<other-path>` - File served for other requests.
-
-### Adding Content
-
-To add files for the server to serve, place them in the `./routes` directory. The server automatically determines the content type based on the file extension.
-
-## Code Highlights
-
-### Global Struct
-
-The `global` struct consolidates all buffers and configurations:
-
-- `buf_recv`, `buf_send`: Buffers for receiving and sending data.
-- `buf_file`, `buf_path`: Buffers for file content and paths.
-- `http_server`, `http_client`: Socket descriptors.
-- `http_address`: Stores the server's address information.
-
-### String Utilities
-
-Custom string utilities are used for:
-- Creation (`string_make` and `string_make_str`).
-- Copying and concatenation (`string_cpy`, `string_cat`).
-- Comparison (`string_cmp`, `string_cmp_str`).
-
-### File Handling
-
-The `file_read` function reads the content of files into the provided buffer. If the file does not exist, an error is logged.
-
-### Content Type Detection
-
-The `http_contenttype` function maps file extensions to their corresponding MIME types. If an extension is unknown, `application/octet-stream` is used as the default.
-
-### HTTP Request Handling
-
-The server:
-1. Parses the `GET` request to determine the requested path.
-2. Reads the file content based on the path.
-3. Generates an appropriate HTTP response with headers and content.
-
-## Future Improvements
-
-- **Dynamic Configuration:** Allow configuration of the server's port and root directory through command-line arguments or environment variables.
-- **Enhanced Error Handling:** Add custom error pages for `404` and other HTTP status codes.
-- **Support for Additional HTTP Methods:** Extend functionality to support `POST`, `PUT`, and `DELETE` methods.
+3. **Improving Performance:**
+   - Introduce multi-threading or asynchronous I/O (outside the current constraints).
 
 ## License
-
 This project is licensed under the MIT License. See `LICENSE` for details.
 
 ## Acknowledgments
+- Inspired by the simplicity and performance of lightweight HTTP servers.
 
-- Inspired by minimal HTTP server examples in C.
-- Designed for simplicity and educational purposes.
+Feel free to contribute by submitting issues or pull requests!
+

@@ -40,8 +40,6 @@ void vec_cpy_str(struct vec* dst, const char* src) {
 void vec_cat_str(struct vec* dst, const char* src) {
     vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
 }
-
-
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
     FILE* fp = fopen(path->data, "r");
@@ -66,12 +64,12 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
     char* path_end = strstr(path_start, " ");
     char* path_ext;
     uint32_t path_size = path_end - path_start;
-    vec_cpy_str(&path_vec, "./routes");
     if(memcmp(path_start, "/", 1) == 0 && path_size == 1) {
         vec_cpy_str(&path_vec, "./routes/index.html");
     } else if(memcmp(path_start, "/favicon.ico", 12) == 0 && path_size == 12) {
         vec_cpy_str(&path_vec, "./routes/favicon.svg");
     } else {
+        vec_cpy_str(&path_vec, "./routes");
         vec_cat(&path_vec, (struct string){.data = path_start, .size = path_size});
     }
     vec_tostr(&path_vec);
