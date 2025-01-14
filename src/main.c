@@ -68,9 +68,9 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
     uint32_t path_size = path_end - path_start;
     vec_cpy_str(&path_vec, "./routes");
     if(memcmp(path_start, "/", 1) == 0 && path_size == 1) {
-        vec_cat_str(&path_vec, "/index.html");
+        vec_cpy_str(&path_vec, "./routes/index.html");
     } else if(memcmp(path_start, "/favicon.ico", 12) == 0 && path_size == 12) {
-        vec_cat_str(&path_vec, "/favicon.svg");
+        vec_cpy_str(&path_vec, "./routes/favicon.svg");
     } else {
         vec_cat(&path_vec, (struct string){.data = path_start, .size = path_size});
     }
@@ -80,29 +80,46 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
         vec_cat_str(&path_vec, ".html");
     }
     vec_tostr(&path_vec);
-    char* ext = strrchr(path_vec.data, '.');
-    if (!ext) {
+    path_ext = strrchr(path_vec.data, '.');
+    if (!path_ext) {
         content_type = "application/octet-stream";
-    }
-    if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) content_type = "text/html";
-    else if (strcmp(ext, ".txt") == 0) content_type = "text/plain";
-    else if (strcmp(ext, ".xml") == 0) content_type = "application/xml";
-    else if (strcmp(ext, ".css") == 0) content_type = "text/css";
-    else if (strcmp(ext, ".js") == 0) content_type = "application/javascript";
-    else if (strcmp(ext, ".png") == 0) content_type = "image/png";
-    else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) content_type = "image/jpeg";
-    else if (strcmp(ext, ".ico") == 0) content_type = "image/x-icon";
-    else if (strcmp(ext, ".svg") == 0) content_type = "image/svg+xml";
-    else if (strcmp(ext, ".webp") == 0) content_type = "image/webp";
-    else if (strcmp(ext, ".json") == 0) content_type = "application/json";
-    else if (strcmp(ext, ".woff") == 0) content_type = "font/woff";
-    else if (strcmp(ext, ".woff2") == 0) content_type = "font/woff2";
-    else if (strcmp(ext, ".ttf") == 0) content_type = "font/ttf";
-    else if (strcmp(ext, ".otf") == 0) content_type = "font/otf";
-    else if (strcmp(ext, ".mp4") == 0) content_type = "video/mp4";
-    else if (strcmp(ext, ".webm") == 0) content_type = "video/webm";
-    else if (strcmp(ext, ".mov") == 0) content_type = "video/quicktime";
-    else {
+    } else if (strcmp(path_ext, ".html") == 0 || strcmp(path_ext, ".htm") == 0) {
+        content_type = "text/html";
+    } else if (strcmp(path_ext, ".txt") == 0) {
+        content_type = "text/plain";
+    } else if (strcmp(path_ext, ".xml") == 0) {
+        content_type = "application/xml";
+    } else if (strcmp(path_ext, ".css") == 0) {
+        content_type = "text/css";
+    } else if (strcmp(path_ext, ".js") == 0) {
+        content_type = "application/javascript";
+    } else if (strcmp(path_ext, ".png") == 0) {
+        content_type = "image/png";
+    } else if (strcmp(path_ext, ".jpg") == 0 || strcmp(path_ext, ".jpeg") == 0) {
+        content_type = "image/jpeg";
+    } else if (strcmp(path_ext, ".ico") == 0) {
+        content_type = "image/x-icon";
+    } else if (strcmp(path_ext, ".svg") == 0) {
+        content_type = "image/svg+xml";
+    } else if (strcmp(path_ext, ".webp") == 0) {
+        content_type = "image/webp";
+    } else if (strcmp(path_ext, ".json") == 0) {
+        content_type = "application/json";
+    } else if (strcmp(path_ext, ".woff") == 0) {
+        content_type = "font/woff";
+    } else if (strcmp(path_ext, ".woff2") == 0) {
+        content_type = "font/woff2";
+    } else if (strcmp(path_ext, ".ttf") == 0) {
+        content_type = "font/ttf";
+    } else if (strcmp(path_ext, ".otf") == 0) {
+        content_type = "font/otf";
+    } else if (strcmp(path_ext, ".mp4") == 0) {
+        content_type = "video/mp4";
+    } else if (strcmp(path_ext, ".webm") == 0) {
+        content_type = "video/webm";
+    } else if (strcmp(path_ext, ".mov") == 0) {
+        content_type = "video/quicktime";
+    } else {
         content_type = "application/octet-stream";
     }
     if(file_read(&file_vec, &path_vec) == result_err) {
@@ -168,6 +185,7 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
         return result_ok;
     }
     rl.rlim_cur = kstacksize;
+    rl.rlim_max = kstacksize;
     result = setrlimit(RLIMIT_STACK, &rl);
     if (result != 0) {
         printf("setrlimit\n");
