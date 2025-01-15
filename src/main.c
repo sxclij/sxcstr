@@ -22,6 +22,13 @@ struct vec {
     char* data;
     uint32_t size;
 };
+struct json {
+    struct string key;
+    uint64_t hash;
+    struct json* val;
+    struct json* lhs;
+    struct json* rhs;
+};
 
 void vec_cpy(struct vec* dst, struct string src) {
     memcpy(dst->data, src.data, src.size);
