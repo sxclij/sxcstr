@@ -48,6 +48,39 @@ void vec_cpy_str(struct vec* dst, const char* src) {
 void vec_cat_str(struct vec* dst, const char* src) {
     vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
 }
+void json_isspace(char ch) {
+    return (ch == ' ' || ch == '\n');
+}
+void json_add()
+void json_tokenize(struct string* dst, struct string src) {
+    struct string* dst_end = dst;
+    const char* base = src.data;
+    const char* current = src.data;
+    while(current < src.data + src.size) {
+        char ch = *current;
+        if(json_isspace(ch) && base != current) {
+            *dst_end = (struct string){.data = base, .size = current - base};
+            dst_end += 1;
+            base = current + 1;
+        } else if(ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',') {
+            *dst_end = (struct string){.data = base, .size = current - base};
+            dst_end += 1;
+            *dst_end = (struct string){.data = current, .size = 1};
+            dst_end += 1;
+            base = current + 1;
+        }
+        current += 1;
+    }
+    dst_end = (struct string){.data = NULL, .size = 0};
+}
+struct json* json_parse(struct json* dst, struct string src) {
+    struct string token[BUFFER_SIZE];
+    uint64_t random = 1;
+    json_tokenize(token, src);
+    for(struct string* token_itr = token; *token_itr.data == NULL; token_itr += 1) {
+
+    }
+}
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
     FILE* fp = fopen(path->data, "r");
@@ -221,6 +254,7 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
 }
 
 int main() {
+    struct json 
     int server_socket;
     struct sockaddr_in address;
     if(init(&server_socket, &address) == result_err) {
