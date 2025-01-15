@@ -25,6 +25,7 @@ struct vec {
 struct json {
     struct string key;
     uint64_t hash;
+    uint64_t rand;
     struct json* val;
     struct json* lhs;
     struct json* rhs;
