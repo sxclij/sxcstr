@@ -48,10 +48,12 @@ void vec_cpy_str(struct vec* dst, const char* src) {
 void vec_cat_str(struct vec* dst, const char* src) {
     vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
 }
-void json_isspace(char ch) {
+int json_isspace(char ch) {
     return (ch == ' ' || ch == '\n');
 }
-void json_add()
+int json_issign(char ch) {
+    return (ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',');
+}
 void json_tokenize(struct string* dst, struct string src) {
     struct string* dst_end = dst;
     const char* base = src.data;
@@ -59,12 +61,16 @@ void json_tokenize(struct string* dst, struct string src) {
     while(current < src.data + src.size) {
         char ch = *current;
         if(json_isspace(ch) && base != current) {
-            *dst_end = (struct string){.data = base, .size = current - base};
-            dst_end += 1;
+            if(base != current) {
+                *dst_end = (struct string){.data = base, .size = current - base};
+                dst_end += 1;
+            }
             base = current + 1;
-        } else if(ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',') {
-            *dst_end = (struct string){.data = base, .size = current - base};
-            dst_end += 1;
+        } else if(json_issign(ch)) {
+            if(base != current) {
+                *dst_end = (struct string){.data = base, .size = current - base};
+                dst_end += 1;
+            }
             *dst_end = (struct string){.data = current, .size = 1};
             dst_end += 1;
             base = current + 1;
@@ -75,10 +81,12 @@ void json_tokenize(struct string* dst, struct string src) {
 }
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
+    struct string* token_itr = token;
+    struct json* dst_itr = dst;
     uint64_t random = 1;
     json_tokenize(token, src);
-    for(struct string* token_itr = token; *token_itr.data == NULL; token_itr += 1) {
-
+    while(token_itr.data != NULL) {
+        
     }
 }
 enum result file_read(struct vec* dst, struct vec* path) {
