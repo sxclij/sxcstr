@@ -49,7 +49,7 @@ void vec_cat_str(struct vec* dst, const char* src) {
     vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
 }
 int json_isspace(char ch) {
-    return (ch == ' ' || ch == '\n');
+    return (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r');
 }
 int json_issign(char ch) {
     return (ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',');
@@ -60,7 +60,7 @@ void json_tokenize(struct string* dst, struct string src) {
     const char* current = src.data;
     while(current < src.data + src.size) {
         char ch = *current;
-        if(json_isspace(ch) && base != current) {
+        if(json_isspace(ch)) {
             if(base != current) {
                 *dst_end = (struct string){.data = base, .size = current - base};
                 dst_end += 1;
@@ -77,16 +77,16 @@ void json_tokenize(struct string* dst, struct string src) {
         }
         current += 1;
     }
-    dst_end = (struct string){.data = NULL, .size = 0};
+    *dst_end = (struct string){.data = NULL, .size = 0};
 }
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
     struct string* token_itr = token;
-    struct json* dst_itr = dst;
+    struct json* dst_end = dst;
     uint64_t random = 1;
     json_tokenize(token, src);
     while(token_itr.data != NULL) {
-        
+
     }
 }
 enum result file_read(struct vec* dst, struct vec* path) {
