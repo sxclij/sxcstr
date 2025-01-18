@@ -16,16 +16,16 @@ enum result {
 };
 struct string {
     const char* data;
-    const uint32_t size;
+    uint32_t size;
 };
 struct vec {
     char* data;
     uint32_t size;
 };
 struct json {
-    struct string key;
+    struct string string;
     uint64_t hash;
-    uint64_t rand;
+    uint64_t random;
     struct json* val;
     struct json* lhs;
     struct json* rhs;
@@ -48,11 +48,74 @@ void vec_cpy_str(struct vec* dst, const char* src) {
 void vec_cat_str(struct vec* dst, const char* src) {
     vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
 }
+uint64_t string_hash(struct string src) {
+    uint64_t x = 0;
+    for(int i=0;i<src.size;i++) {
+        x <<= 8;
+        x |= src.data[i];
+    }
+    return x;
+}
 int json_isspace(char ch) {
     return (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r');
 }
 int json_issign(char ch) {
     return (ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',');
+}
+uint64_t json_random(uint64_t x) {
+	x ^= x << 13;
+	x ^= x >> 7;
+	x ^= x << 17;
+    return x;
+}
+struct json* json_newnode(struct json** dst_end, uint64_t* random, struct string string) {
+    struct json* x = *dst_end;
+    *random = json_random(*random);
+    *x = (struct json){
+        .string = string,
+        .hash = string_hash(string),
+        .random = *random, 
+        .val = NULL, 
+        .lhs = NULL, 
+        .rhs = NULL
+    };
+    *dst_end += 1;
+    return x;
+}
+struct json* json_treap_rightrotate(struct json* y) {
+    struct json* x = y->lhs;
+    struct json* T2 = x->rhs;
+    x->rhs = y;
+    y->lhs = T2;
+    return x;
+}
+struct json* json_treap_leftrotate(struct json* x) {
+    struct json* y = x->rhs;
+    struct json* T2 = y->lhs;
+    y->lhs = x;
+    x->rhs = T2;
+    return y;
+}
+struct json* json_treap_insert(struct json* root, struct json* x) {
+    if (root == NULL) {
+        return x;
+    }
+    if (x->random > root->random) {
+        if (x->hash < root->hash) {
+            root->lhs = json_treap_insert(root->lhs, x);
+            return json_treap_rightrotate(root);
+        } else {
+            root->rhs = json_treap_insert(root->rhs, x);
+            return json_treap_leftrotate(root);
+        }
+    } else {
+        if (x->hash < root->hash) {
+            root->lhs = json_treap_insert(root->lhs, x);
+        } else {
+            root->rhs = json_treap_insert(root->rhs, x);
+        }
+        return root;
+    }
 }
 void json_tokenize(struct string* dst, struct string src) {
     struct string* dst_end = dst;
@@ -82,12 +145,57 @@ void json_tokenize(struct string* dst, struct string src) {
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
     struct string* token_itr = token;
-    struct json* dst_end = dst;
     uint64_t random = 1;
+    struct json* dst_end = dst;
+    struct json* root = json_newnode(&dst_end, &random, (struct string){.data = NULL, .size = 0});
     json_tokenize(token, src);
-    while(token_itr.data != NULL) {
-
+    token_itr = token;
+    struct json* current = root;
+    struct json* stack[BUFFER_SIZE];
+    int stack_ptr = 0;
+    while(token_itr->data != NULL) {
+        if (token_itr->size == 1 && token_itr->data[0] == '{') {
+            stack[stack_ptr++] = current;
+            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
+            current = new_node;
+        } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
+            stack[stack_ptr++] = current;
+            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
+            current = new_node;
+        } else if (token_itr->size == 1 && token_itr->data[0] == '}') {
+            if(stack_ptr > 0) {
+                current = stack[--stack_ptr];
+            }
+        } else if (token_itr->size == 1 && token_itr->data[0] == ']') {
+            if(stack_ptr > 0) {
+                current = stack[--stack_ptr];
+            }
+        } else if (token_itr->size == 1 && token_itr->data[0] == ':') {
+            if(current->val == NULL) {
+                token_itr++;
+                if(token_itr->data != NULL) {
+                    struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
+                    current->val = new_node;
+                }
+            }
+        } else if (token_itr->size == 1 && token_itr->data[0] == ',') {
+            
+        } else {
+            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
+             if(stack_ptr > 0) {
+                struct json* parent = stack[stack_ptr - 1];
+                if(parent->val == NULL) {
+                    parent->val = new_node;
+                } else {
+                    root = json_treap_insert(root, new_node);
+                }
+            } else {
+                root = json_treap_insert(root, new_node);
+            }
+        }
+        token_itr++;
     }
+    return root;
 }
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
@@ -262,7 +370,7 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
 }
 
 int main() {
-    struct json 
+    struct json json[BUFFER_SIZE];
     int server_socket;
     struct sockaddr_in address;
     if(init(&server_socket, &address) == result_err) {
