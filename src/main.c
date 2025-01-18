@@ -197,6 +197,8 @@ struct json* json_parse(struct json* dst, struct string src) {
     }
     return root;
 }
+struct json* json_get(struct json* root, struct string* path) {
+}
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
     FILE* fp = fopen(path->data, "r");
