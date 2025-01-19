@@ -21,6 +21,7 @@ struct string {
 struct vec {
     char* data;
     uint32_t size;
+    uint32_t capacity;
 };
 struct json {
     struct string string;
@@ -32,12 +33,20 @@ struct json {
 };
 
 void vec_cpy(struct vec* dst, struct string src) {
+    if (dst->capacity < src.size) {
+        dst->capacity = src.size * 2;
+        dst->data = realloc(dst->data, dst->capacity);
+    }
     memcpy(dst->data, src.data, src.size);
-    dst->size = src.size;    
+    dst->size = src.size;
 }
 void vec_cat(struct vec* dst, struct string src) {
+    if (dst->capacity < dst->size + src.size) {
+        dst->capacity = (dst->size + src.size) * 2;
+        dst->data = realloc(dst->data, dst->capacity);
+    }
     memcpy(dst->data + dst->size, src.data, src.size);
-    dst->size += src.size;    
+    dst->size += src.size;
 }
 void vec_tostr(struct vec* dst) {
     dst->data[dst->size] = '\0';
@@ -126,73 +135,76 @@ struct json* json_treap_insert(struct json* root, struct json* x) {
     }
     return root;
 }
-void json_tokenize(struct string* dst, struct string src) {
-    struct string* dst_end = dst;
+void json_tokenize(struct vec* dst, struct string src) {
     const char* base = src.data;
     const char* current = src.data;
     while(current < src.data + src.size) {
         char ch = *current;
         if(json_isspace(ch)) {
             if(base != current) {
-                *dst_end = (struct string){.data = base, .size = current - base};
-                dst_end += 1;
+                struct string token = {.data = base, .size = current - base};
+                vec_cat(dst, (struct string){.data = (char*)&token, .size = sizeof(token)});
             }
             base = current + 1;
         } else if(json_issign(ch)) {
             if(base != current) {
-                *dst_end = (struct string){.data = base, .size = current - base};
-                dst_end += 1;
+                struct string token = {.data = base, .size = current - base};
+                vec_cat(dst, (struct string){.data = (char*)&token, .size = sizeof(token)});
             }
-            *dst_end = (struct string){.data = current, .size = 1};
-            dst_end += 1;
+            struct string token = {.data = current, .size = 1};
+            vec_cat(dst, (struct string){.data = (char*)&token, .size = sizeof(token)});
             base = current + 1;
         }
         current += 1;
     }
-    *dst_end = (struct string){.data = NULL, .size = 0};
+    if(base != current) {
+        struct string token = {.data = base, .size = current - base};
+        vec_cat(dst, (struct string){.data = (char*)&token, .size = sizeof(token)});
+    }
+    struct string null_token = {.data = NULL, .size = 0};
+    vec_cat(dst, (struct string){.data = (char*)&null_token, .size = sizeof(null_token)});
 }
 struct json* json_parse(struct json* dst, struct string src) {
-    struct string token[BUFFER_SIZE];
-    struct string* token_itr = token;
+    char token_data[BUFFER_SIZE];
+    struct vec token_vec = {.data = token_data, .size = 0, .capacity = BUFFER_SIZE};
     uint64_t random = 1;
     struct json* dst_end = dst;
     struct json* root = json_newnode(&dst_end, &random, (struct string){.data = NULL, .size = 0});
-    json_tokenize(token, src);
-    token_itr = token;
+    json_tokenize(&token_vec, src);
+    struct string* token_itr = (struct string*)token_vec.data;
     struct json* current = root;
-    struct json* stack[BUFFER_SIZE];
-    int stack_ptr = 0;
+    char stack_data[BUFFER_SIZE];
+    struct vec stack_vec = {.data = stack_data, .size = 0, .capacity = BUFFER_SIZE};
     while (token_itr->data != NULL) {
         if (token_itr->size == 1) {
             switch (token_itr->data[0]) {
                 case '{': // Handle opening brace
-                    stack[stack_ptr++] = current;
-                    current = json_newnode(&dst_end, &random, *token_itr);
-                    break;
                 case '[': // Handle opening bracket
-                    stack[stack_ptr++] = current;
+                    vec_cat(&stack_vec, (struct string){.data = (char*)&current, .size = sizeof(current)});
                     current = json_newnode(&dst_end, &random, *token_itr);
                     break;
                 case '}': // Handle closing brace
                 case ']': // Handle closing bracket
-                    if (stack_ptr > 0) {
-                        current = stack[--stack_ptr];
+                    if (stack_vec.size > 0) {
+                        stack_vec.size -= sizeof(current);
+                        current = *(struct json**)(stack_vec.data + stack_vec.size);
                     }
                     break;
                 case ':': // Handle colon
                     if (current->val == NULL) {
                         token_itr++;
-                        if (token_itr->data != NULL) {
-                            current->val = json_newnode(&dst_end, &random, *token_itr);
+                        if (token_itr->data == NULL) {
+                            return root;
                         }
+                        current->val = json_newnode(&dst_end, &random, *token_itr);
                     }
                     break;
                 case ',': // Handle comma
                     break;
-                default: // Handle other tokens (values)
+                default: { // Handle other tokens (values)
                     struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-                    if (stack_ptr > 0) {
-                        struct json* parent = stack[stack_ptr - 1];
+                    if (stack_vec.size > 0) {
+                        struct json* parent = *(struct json**)(stack_vec.data + stack_vec.size - sizeof(current));
                         if (parent->val == NULL) {
                             parent->val = new_node;
                         } else {
@@ -200,17 +212,16 @@ struct json* json_parse(struct json* dst, struct string src) {
                         }
                     } else {
                         root = json_treap_insert(root, new_node);
+                        current = new_node;
                     }
                     break;
+                }
             }
-        } else if (token_itr->data[0] == '"') {
-            // Handle string
-            struct string str = *token_itr;
-            str.data++;
-            str.size -= 2;
-            struct json* new_node = json_newnode(&dst_end, &random, str);
-            if (stack_ptr > 0) {
-                struct json* parent = stack[stack_ptr - 1];
+        } else {
+            // Handle string, number, boolean, null
+            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
+            if (stack_vec.size > 0) {
+                struct json* parent = *(struct json**)(stack_vec.data + stack_vec.size - sizeof(current));
                 if (parent->val == NULL) {
                     parent->val = new_node;
                 } else {
@@ -218,74 +229,7 @@ struct json* json_parse(struct json* dst, struct string src) {
                 }
             } else {
                 root = json_treap_insert(root, new_node);
-            }
-        } else if (token_itr->data[0] == '-' || (token_itr->data[0] >= '0' && token_itr->data[0] <= '9')) {
-            // Handle number
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-            if (stack_ptr > 0) {
-                struct json* parent = stack[stack_ptr - 1];
-                if (parent->val == NULL) {
-                    parent->val = new_node;
-                } else {
-                   if(parent->rhs == NULL) {
-                        parent->rhs = new_node;
-                    } else {
-                        root = json_treap_insert(root, new_node);
-                    }
-                }
-            } else {
-                root = json_treap_insert(root, new_node);
-            }
-        } else if (memcmp(token_itr->data, "true", 4) == 0 || memcmp(token_itr->data, "false", 5) == 0) {
-            // Handle boolean
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-             if (stack_ptr > 0) {
-                struct json* parent = stack[stack_ptr - 1];
-                if (parent->val == NULL) {
-                    parent->val = new_node;
-                } else {
-                    if(parent->rhs == NULL) {
-                        parent->rhs = new_node;
-                    } else {
-                        root = json_treap_insert(root, new_node);
-                    }
-                }
-            } else {
-                root = json_treap_insert(root, new_node);
-            }
-        } else if (memcmp(token_itr->data, "null", 4) == 0) {
-            // Handle null
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-             if (stack_ptr > 0) {
-                struct json* parent = stack[stack_ptr - 1];
-                if (parent->val == NULL) {
-                    parent->val = new_node;
-                } else {
-                    if(parent->rhs == NULL) {
-                        parent->rhs = new_node;
-                    } else {
-                        root = json_treap_insert(root, new_node);
-                    }
-                }
-            } else {
-                root = json_treap_insert(root, new_node);
-            }
-        } else {
-            // Handle other tokens (values)
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-            if (stack_ptr > 0) {
-                struct json* parent = stack[stack_ptr - 1];
-                if (parent->val == NULL) {
-                    parent->val = new_node;
-                } else {
-                    if(parent->rhs == NULL) {
-                        parent->rhs = new_node;
-                    } else {
-                        root = json_treap_insert(root, new_node);
-                    }
-                }
-            } else {
-                root = json_treap_insert(root, new_node);
+                current = new_node;
             }
         }
         token_itr++;
@@ -309,6 +253,54 @@ struct json* json_get(struct json* root, struct string* path) {
         }
     }
     return NULL;
+}
+void json_print(struct json* root, int indent) {
+    if (root == NULL) {
+        return;
+    }
+
+    if (root->string.data == NULL) {
+        printf("null");
+        return;
+    }
+
+    if (root->string.size == 1) {
+        if (root->string.data[0] == '{') {
+            printf("{\n");
+            json_print(root->val, indent + 1);
+            printf("%*s}", indent * 4, "");
+        } else if (root->string.data[0] == '[') {
+            printf("[\n");
+            json_print(root->val, indent + 1);
+            printf("%*s]", indent * 4, "");
+        } else if (root->string.data[0] == '}') {
+            printf("\n");
+        } else if (root->string.data[0] == ']') {
+            printf("\n");
+        } else if (root->string.data[0] == ':') {
+            printf(": ");
+            json_print(root->val, indent);
+        } else if (root->string.data[0] == ',') {
+            printf(",\n");
+            json_print(root->val, indent);
+        }
+        return;
+    }
+    
+    printf("%*s\"", indent * 4, "");
+    for(int i = 0; i < root->string.size; i++) {
+        putchar(root->string.data[i]);
+    }
+    printf("\"");
+    if(root->val != NULL) {
+        json_print(root->val, indent);
+    }
+    if(root->lhs != NULL) {
+        json_print(root->lhs, indent);
+    }
+    if(root->rhs != NULL) {
+        json_print(root->rhs, indent);
+    }
 }
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
@@ -439,18 +431,11 @@ enum result deinit(int server_socket) {
     close(server_socket);
     return result_ok;
 }
-enum result init_json(struct json* setting_json) {
-    const char* setting_data = "{/\"a/\":/\"1/\"}";
-    struct string setting_string = (struct string){.data = setting_data, .size = strlen(setting_data)};
-    struct json* setting_root = json_parse(setting_json, setting_string);
-}
-enum result init(int* server_socket, struct sockaddr_in* address, struct json* setting_json) {
+enum result init(int* server_socket, struct sockaddr_in* address) {
     const rlim_t kstacksize = RLIMIT_SIZE;
     struct rlimit rl;
     int result;
     int option = 1;
-
-    init_json(setting_json);
 
     result = getrlimit(RLIMIT_STACK, &rl);
     if (result != 0) {
@@ -489,15 +474,72 @@ enum result init(int* server_socket, struct sockaddr_in* address, struct json* s
     }
     return result_ok;
 }
+void json_test() {
+    // Example JSON string
+    const char* json_string = "{\"name\": \"John\", \"age\": 30, \"isStudent\": false, \"grades\": [90, 85, 88]}";
+
+    // Initialize buffer for parsed JSON objects
+    struct json json_objects[100];
+    
+    // Parse the JSON string into a JSON structure
+    struct json* root = json_parse(json_objects, (struct string){.data = json_string, .size = strlen(json_string)});
+    
+    // Check if parsing was successful
+    if (root == NULL) {
+        printf("Failed to parse JSON\n");
+        return;
+    }
+
+    // Example of accessing specific JSON values
+    struct string path_name = (struct string){.data = "name", .size = strlen("name")};
+    struct string path_age = (struct string){.data = "age", .size = strlen("age")};
+    struct string path_isStudent = (struct string){.data = "isStudent", .size = strlen("isStudent")};
+
+    struct json* name_node = json_get(root, &path_name);
+    struct json* age_node = json_get(root, &path_age);
+    struct json* is_student_node = json_get(root, &path_isStudent);
+
+    printf("test\n");
+    if (name_node != NULL) {
+        for(int i = 0; i<name_node->string.size;i++) {
+            putchar(name_node->string.data[i]);
+        }
+    }
+    printf("\n");
+    printf("test\n");
+
+    // // Print the values retrieved
+    // if (name_node) {
+    //     printf("Name: %.*s\n", name_node->string.size, name_node->string.data);
+    // } else {
+    //     printf("Name not found\n");
+    // }
+
+    // if (age_node) {
+    //     printf("Age: %.*s\n", age_node->string.size, age_node->string.data);
+    // } else {
+    //     printf("Age not found\n");
+    // }
+
+    // if (is_student_node) {
+    //     printf("IsStudent: %.*s\n", is_student_node->string.size, is_student_node->string.data);
+    // } else {
+    //     printf("IsStudent not found\n");
+    // }
+    
+    printf("json_print:\n");
+    json_print(root, 0);
+    printf("\n");
+}
 
 int main() {
-    struct json setting_json[BUFFER_SIZE];
     int server_socket;
     struct sockaddr_in address;
-    if(init(&server_socket, &address, setting_json) == result_err) {
+    if(init(&server_socket, &address) == result_err) {
         printf("init\n\n");
         return 0;
     }
+    json_test();
     if(loop(server_socket, &address) == result_err) {
         printf("loop\n\n");
     }
