@@ -8,7 +8,7 @@
 
 #define PORT 8080
 #define BUFFER_SIZE (1024 * 16 * 1)
-#define RLIMIT_SIZE (1024 * 1024 * 16)
+#define RLIMIT_SIZE (1024 * 1024 * 128)
 
 enum result {
     result_ok,
@@ -169,70 +169,49 @@ void json_tokenize(struct string* dst, struct string src) {
     }
     *dst_end = (struct string){.data = NULL, .size = 0};
 }
+
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
-    struct string* token_itr = token;
-    uint64_t random = 1;
+    struct json* stack_json[BUFFER_SIZE];
+    int stack_iskey[BUFFER_SIZE];
     struct json* dst_end = dst;
-    struct json* root = json_newnode(&dst_end, &random, (struct string){.data = NULL, .size = 0});
-    json_tokenize(token, src);
+    struct string* token_itr = token;
+    struct json* root = NULL;
+    int nest = 0;
+    uint64_t random = 1;
+
+    json_tokenize(token, src); // Tokenize the input JSON string.
     token_itr = token;
-    struct json* current = root;
-    struct json* stack[BUFFER_SIZE];
-    int stack_ptr = 0;
-    while(token_itr->data != NULL) {
-        if (token_itr->size == 1 && token_itr->data[0] == '{') {
-            stack[stack_ptr++] = current;
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-            current = new_node;
-        } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
-            stack[stack_ptr++] = current;
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-            current = new_node;
-        } else if (token_itr->size == 1 && token_itr->data[0] == '}') {
-            if(stack_ptr > 0) {
-                current = stack[--stack_ptr];
-            }
-        } else if (token_itr->size == 1 && token_itr->data[0] == ']') {
-            if(stack_ptr > 0) {
-                current = stack[--stack_ptr];
-            }
+
+    stack_json[0] = NULL;
+    stack_iskey[0] = 1;
+
+    while (token_itr->data != NULL) {
+        if ((token_itr->size == 1 && token_itr->data[0] == '{') || (token_itr->size == 1 && token_itr->data[0] == '[')) {
+            nest++;
+        } else if ((token_itr->size == 1 && token_itr->data[0] == '}') || (token_itr->size == 1 && token_itr->data[0] == ']')) {
+            nest--;
         } else if (token_itr->size == 1 && token_itr->data[0] == ':') {
-            if(current->val == NULL) {
-                token_itr++;
-                if(token_itr->data != NULL) {
-                    struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-                    current->val = new_node;
-                }
-            }
+
         } else if (token_itr->size == 1 && token_itr->data[0] == ',') {
-            
+
         } else {
-            struct json* new_node = json_newnode(&dst_end, &random, *token_itr);
-             if(stack_ptr > 0) {
-                struct json* parent = stack[stack_ptr - 1];
-                if(parent->val == NULL) {
-                    parent->val = new_node;
-                } else {
-                    root = json_treap_insert(root, new_node);
-                }
-            } else {
-                root = json_treap_insert(root, new_node);
-            }
+            struct json* newnode = json_newnode(&dst_end, &random, *token_itr);
         }
         token_itr++;
     }
+
     return root;
 }
+
 struct json* json_get(struct json* root, struct string* path) {
 }
 
 void json_test() {
-    struct json example_json[100];
+    struct json example_json[BUFFER_SIZE];
     const char *example_str = "{\"name\": \"John Doe\", \"age\": 30, \"city\": \"Tokyo\", \"items\": [\"apple\", \"orange\"]}";
     struct json* example_root = json_parse(example_json, (struct string){.data=example_str, .size = strlen(example_str)});
     return;
-    
 }
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
@@ -383,26 +362,26 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
         printf("setrlimit\n");
         return result_err;
     }
-    *server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (*server_socket == 0) {
-        printf("socket\n");
-        return result_err;
-    }
-    if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &option, sizeof(option))) {
-        printf("setsockopt\n");
-        return result_err;
-    }
-    address->sin_family = AF_INET;
-    address->sin_addr.s_addr = INADDR_ANY;
-    address->sin_port = htons(PORT);
-    if (bind(*server_socket, (struct sockaddr*)address, sizeof(*address)) < 0) {
-        printf("bind\n");
-        return result_err;
-    }
-    if (listen(*server_socket, SOMAXCONN) < 0) {
-        printf("listen\n");
-        return result_err;
-    }
+    // *server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    // if (*server_socket == 0) {
+    //     printf("socket\n");
+    //     return result_err;
+    // }
+    // if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option))) {
+    //     printf("setsockopt\n");
+    //     return result_err;
+    // }
+    // address->sin_family = AF_INET;
+    // address->sin_addr.s_addr = INADDR_ANY;
+    // address->sin_port = htons(PORT);
+    // if (bind(*server_socket, (struct sockaddr*)address, sizeof(*address)) < 0) {
+    //     printf("bind\n");
+    //     return result_err;
+    // }
+    // if (listen(*server_socket, SOMAXCONN) < 0) {
+    //     printf("listen\n");
+    //     return result_err;
+    // }
     return result_ok;
 }
 
