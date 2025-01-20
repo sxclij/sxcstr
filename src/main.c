@@ -7,8 +7,8 @@
 #include <sys/resource.h>
 
 #define PORT 8080
-#define BUFFER_SIZE (1024 * 16 * 1)
-#define RLIMIT_SIZE (1024 * 1024 * 128)
+#define BUFFER_SIZE (1024 * 1024 * 16)
+#define RLIMIT_SIZE (1024 * 1024 * 1024)
 
 enum result {
     result_ok,
@@ -525,7 +525,7 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
 }
 enum result main2(int server_socket, struct sockaddr_in* address) {
     char setting_data[BUFFER_SIZE];
-    struct json setting_json[BUFFER_SIZE];
+    struct json setting_json[BUFFER_SIZE / sizeof(struct json)];
     struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
     if(file_read_str(&setting_vec, "./routes/setting.json") == result_err) {
         printf("read setting.json\n");
