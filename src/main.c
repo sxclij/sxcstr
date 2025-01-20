@@ -281,59 +281,111 @@ struct json* json_get(struct json* root, struct string path) {
     }
     return node;
 }
-void json_tovec_internal(struct vec* dst, struct json* src, int is_key) {
-    if (!src) return;
 
-    if (is_key) {
-        vec_cat_str(dst, "\"");
-        vec_cat(dst, src->string);
-        vec_cat_str(dst, "\"");
-    } else if (src->val == NULL && src->lhs == NULL && src->rhs == NULL) { // It's a simple value
-        vec_cat(dst, src->string);
-    } else {
-        // Check if it's an array or an object
-        int is_array = 1;
-        struct json* temp = src->val;
-        while(temp) {
-            if (temp->string.size > 0 && (temp->string.data[0] == '{' || temp->string.data[0] == '"')) {
-                is_array = 0;
+void json_tovec_internal(struct vec* dst, struct json* src);
+
+// Helper function to escape special characters in strings
+void json_escape_string(struct vec* dst, struct string str) {
+    for (uint32_t i = 0; i < str.size; i++) {
+        switch (str.data[i]) {
+            case '"':
+                vec_cat_str(dst, "\\\"");
                 break;
-            }
-            temp = temp->rhs;
-        }
-
-        if (is_array) {
-            vec_cat_str(dst, "[");
-            struct json* current = src->val;
-            int first = 1;
-            while (current) {
-                if (!first) vec_cat_str(dst, ",");
-                json_tovec_internal(dst, current, 0);
-                current = current->rhs;
-                first = 0;
-            }
-            vec_cat_str(dst, "]");
-        } else {
-            vec_cat_str(dst, "{");
-            struct json* current = src->val;
-            int first = 1;
-            while (current) {
-                if (!first) vec_cat_str(dst, ",");
-                json_tovec_internal(dst, current, 1);
-                vec_cat_str(dst, ":");
-                json_tovec_internal(dst, current->val, 0);
-                current = current->rhs;
-                first = 0;
-            }
-            vec_cat_str(dst, "}");
+            case '\\':
+                vec_cat_str(dst, "\\\\");
+                break;
+            case '/':
+                vec_cat_str(dst, "\\/");
+                break;
+            case '\b':
+                vec_cat_str(dst, "\\b");
+                break;
+            case '\f':
+                vec_cat_str(dst, "\\f");
+                break;
+            case '\n':
+                vec_cat_str(dst, "\\n");
+                break;
+            case '\r':
+                vec_cat_str(dst, "\\r");
+                break;
+            case '\t':
+                vec_cat_str(dst, "\\t");
+                break;
+            default:
+                {
+                    char ch = str.data[i];
+                    vec_cat(dst, (struct string){.data = &ch, .size = 1});
+                }
+                break;
         }
     }
 }
 
+void json_tovec_object(struct vec* dst, struct json* src) {
+    if (!src) return;
+    vec_cat_str(dst, "{");
+    struct json* current = src;
+    int first = 1;
+    void json_tovec_object_internal(struct vec* dst, struct json* node, int* first) {
+        if (!node) return;
+        json_tovec_object_internal(dst, node->lhs, first);
+        if (!*first) {
+            vec_cat_str(dst, ",");
+        }
+        *first = 0;
+        vec_cat_str(dst, "\"");
+        json_escape_string(dst, node->string);
+        vec_cat_str(dst, "\":");
+        json_tovec_internal(dst, node->val);
+        json_tovec_object_internal(dst, node->rhs, first);
+    }
+    json_tovec_object_internal(dst, src, &first);
+    vec_cat_str(dst, "}");
+}
+
+void json_tovec_array(struct vec* dst, struct json* src) {
+    if (!src) return;
+    vec_cat_str(dst, "[");
+    struct json* current = src;
+    int first = 1;
+    while (current) {
+        if (!first) {
+            vec_cat_str(dst, ",");
+        }
+        first = 0;
+        json_tovec_internal(dst, current);
+        current = current->rhs; // Assuming array elements are linked via rhs
+    }
+    vec_cat_str(dst, "]");
+}
+
+void json_tovec_string(struct vec* dst, struct json* src) {
+    if (!src) return;
+    vec_cat_str(dst, "\"");
+    json_escape_string(dst, src->string);
+    vec_cat_str(dst, "\"");
+}
+
+void json_tovec_internal(struct vec* dst, struct json* src) {
+    if (!src) return;
+
+    // Heuristic to determine type: if it has children in lhs/rhs, it's likely an object
+    if (src->lhs || src->rhs) {
+        json_tovec_object(dst, src);
+    } else if (src->val) { // If val is set, and not an object, it could be an array element
+        json_tovec_internal(dst, src->val); // Render the value directly
+    }
+     else {
+        // Otherwise, treat it as a primitive value (string, number, boolean, null)
+        json_tovec_string(dst, src);
+    }
+}
+
 void json_tovec(struct vec* dst, struct json* src) {
-    dst->size = 0; // Reset the vector
-    json_tovec_internal(dst, src, 0);
-    vec_tostr(dst);
+    dst->size = 0; // Reset the vec
+    json_tovec_internal(dst, src);
+    vec_tostr(dst); // Null-terminate the string
 }
 
 void json_test() {
