@@ -56,8 +56,7 @@ void vec_cat_str(struct vec* dst, const char* src) {
 uint64_t string_hash(struct string src) {
     uint64_t x = 0;
     for (int i = 0; i < src.size; i++) {
-        x <<= 8;
-        x |= src.data[i];
+        x = ((x << 5) + x) + src.data[i];
     }
     return x;
 }
