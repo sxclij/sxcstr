@@ -158,7 +158,7 @@ void json_tokenize(struct string* dst, struct string src) {
                 }
             }
             if (end_quote != NULL) {
-                *dst_end = prim_tostring(start, end_quote - start);
+                *dst_end = itr_tostring(start, end_quote);
                 dst_end++;
                 current++;
                 continue;
@@ -178,13 +178,12 @@ void json_tokenize(struct string* dst, struct string src) {
             current++;
         }
         if (current > token_start) {
-            *dst_end = prim_tostring(token_start, current - token_start);
+            *dst_end = itr_tostring(token_start, token_start);
             dst_end++;
         }
     }
     *dst_end = prim_tostring(NULL, 0);
 }
-
 struct json* json_find(struct json* root, uint64_t hash) {
     struct json* current = root;
     while (current != NULL) {
@@ -198,7 +197,6 @@ struct json* json_find(struct json* root, uint64_t hash) {
     }
     return NULL;
 }
-
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
     struct json* stack_json[BUFFER_SIZE];
@@ -261,7 +259,6 @@ struct json* json_parse(struct json* dst, struct string src) {
 
     return stack_json[0];
 }
-
 struct json* json_get(struct json* root, struct string path) {
     const char* start = path.data;
     const char* end = path.data + path.size;
@@ -289,7 +286,6 @@ struct json* json_get(struct json* root, struct string path) {
     }
     return node;
 }
-
 void json_escape_string(struct vec* dst, struct string str) {
     for (uint32_t i = 0; i < str.size; i++) {
         switch (str.data[i]) {
@@ -326,21 +322,17 @@ void json_escape_string(struct vec* dst, struct string str) {
         }
     }
 }
-
 void json_tovec_no_recursion(struct vec* dst, struct json* src) {
     dst->size = 0;
     if (!src) return;
-
     struct json* stack[BUFFER_SIZE];
     int top = -1;
     stack[++top] = src;
     int is_first[BUFFER_SIZE];
     is_first[top] = 1;
-
     while (top >= 0) {
         struct json* current = stack[top];
-
-        if (current->lhs || current->rhs) { // Object
+        if (current->lhs || current->rhs) { 
             if (is_first[top]) {
                 vec_cat_str(dst, "{");
                 is_first[top] = 0;
@@ -352,7 +344,6 @@ void json_tovec_no_recursion(struct vec* dst, struct json* src) {
                 }
                 continue;
             } else {
-                // Object element processing
                 if (current->lhs) {
                     vec_cat_str(dst, ",");
                     vec_cat_str(dst, "\"");
@@ -365,7 +356,7 @@ void json_tovec_no_recursion(struct vec* dst, struct json* src) {
             }
             vec_cat_str(dst, "}");
             top--;
-        } else if (current->val) { // Array
+        } else if (current->val) { 
             if (is_first[top]) {
                 vec_cat_str(dst, "[");
                 is_first[top] = 0;
@@ -379,12 +370,12 @@ void json_tovec_no_recursion(struct vec* dst, struct json* src) {
             } else {
                 if (current) {
                     vec_cat_str(dst, ",");
-                    json_tovec_no_recursion(dst, current); // This line still has recursion
+                    json_tovec_no_recursion(dst, current); 
                 }
             }
             vec_cat_str(dst, "]");
             top--;
-        } else { // String
+        } else { 
             vec_cat_str(dst, "\"");
             json_escape_string(dst, current->string);
             vec_cat_str(dst, "\"");
@@ -393,7 +384,6 @@ void json_tovec_no_recursion(struct vec* dst, struct json* src) {
     }
     vec_tostr(dst);
 }
-
 void json_tovec(struct vec* dst, struct json* src) {
     dst->size = 0;
     json_tovec_no_recursion(dst, src);
