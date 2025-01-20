@@ -173,10 +173,14 @@ void json_tokenize(struct string* dst, struct string src) {
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
     struct json* stack_json[BUFFER_SIZE];
-    int stack_iskey[BUFFER_SIZE];
+    struct json* tail_json[BUFFER_SIZE];
+    enum {
+        json_type_key,
+        json_type_val,
+        json_type_arr,
+    } stack_type[BUFFER_SIZE];
     struct json* dst_end = dst;
     struct string* token_itr = token;
-    struct json* root = NULL;
     int nest = 0;
     uint64_t random = 1;
 
@@ -184,24 +188,49 @@ struct json* json_parse(struct json* dst, struct string src) {
     token_itr = token;
 
     stack_json[0] = NULL;
-    stack_iskey[0] = 1;
+    tail_json[0] = NULL;
+    stack_type[0] = json_type_key;
 
     while (token_itr->data != NULL) {
-        if ((token_itr->size == 1 && token_itr->data[0] == '{') || (token_itr->size == 1 && token_itr->data[0] == '[')) {
+        if (token_itr->size == 1 && token_itr->data[0] == '{') {
             nest++;
+            stack_json[nest] = NULL;
+            tail_json[0] = NULL;
+            stack_type[nest] = json_type_key;
+        } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
+            nest++;
+            stack_json[nest] = NULL;
+            tail_json[0] = NULL;
+            stack_type[nest] = json_type_arr;
         } else if ((token_itr->size == 1 && token_itr->data[0] == '}') || (token_itr->size == 1 && token_itr->data[0] == ']')) {
+            struct json* currentnode = stack_json[nest];
             nest--;
+            if(stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
+                stack_json[nest] = json_treap_insert(stack_json[nest], currentnode);
+            } else if(stack_type[nest] == json_type_val) {
+                stack_json[nest]->val = json_treap_insert(stack_json[nest]->val, currentnode);
+            }
         } else if (token_itr->size == 1 && token_itr->data[0] == ':') {
-
+            stack_type[nest] = json_type_val;
         } else if (token_itr->size == 1 && token_itr->data[0] == ',') {
-
+            if(stack_type[nest] == json_type_val) {
+                stack_type[nest] = json_type_key;
+            } else if(stack_type[nest-1] == json_type_arr) {
+                stack_type[nest] = json_type_arr;
+            } 
         } else {
             struct json* newnode = json_newnode(&dst_end, &random, *token_itr);
+            if(stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
+                stack_json[nest] = json_treap_insert(stack_json[nest], newnode);
+                tail_json[nest] = newnode;
+            } else if(stack_type[nest] == json_type_val) {
+                tail_json[nest]->val = json_treap_insert(tail_json[nest]->val, newnode);
+            }
         }
         token_itr++;
     }
 
-    return root;
+    return stack_json[0];
 }
 
 struct json* json_get(struct json* root, struct string* path) {
@@ -327,7 +356,7 @@ enum result loop(int server_socket, struct sockaddr_in* address) {
     while (1) {
         client_socket = accept(server_socket, (struct sockaddr*)address, &address_length);
         if (client_socket < 0) {
-            printf("accept\n");
+            printf("accept\n\n");
             continue;
         }
         if(handle(client_socket) == result_err) {
