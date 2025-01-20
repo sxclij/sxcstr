@@ -478,17 +478,10 @@ enum result loop(int server_socket, struct sockaddr_in* address, struct json* se
         close(client_socket);
     }
 }
-enum result deinit(int server_socket) {
-    close(server_socket);
-    return result_ok;
-}
-enum result init(int* server_socket, struct sockaddr_in* address) {
+enum result init_limit() {
     const rlim_t kstacksize = RLIMIT_SIZE;
     struct rlimit rl;
-    int result;
-    int option = 1;
-    result = getrlimit(RLIMIT_STACK, &rl);
-    if (result != 0) {
+    if (getrlimit(RLIMIT_STACK, &rl) != 0) {
         printf("getrlimit\n");
         return result_err;
     }
@@ -497,11 +490,13 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
     }
     rl.rlim_cur = kstacksize;
     rl.rlim_max = kstacksize;
-    result = setrlimit(RLIMIT_STACK, &rl);
-    if (result != 0) {
+    if (setrlimit(RLIMIT_STACK, &rl) != 0) {
         printf("setrlimit\n");
         return result_err;
     }
+}
+enum result init_socket(int* server_socket, struct sockaddr_in* address) {
+    int option = 1;
     *server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (*server_socket == 0) {
         printf("socket\n");
@@ -524,29 +519,38 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
     }
     return result_ok;
 }
-enum result main2(int server_socket, struct sockaddr_in* address) {
-    char setting_data[BUFFER_SIZE];
-    struct json setting_json[BUFFER_SIZE / sizeof(struct json)];
-    struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
-    if(file_read_str(&setting_vec, "./routes/setting.json") == result_err) {
+enum result init_setting(struct vec* setting_vec, struct json* setting_json, struct json** setting_root) {
+    if(file_read_str(setting_vec, "./routes/setting.json") == result_err) {
         printf("read setting.json\n");
         return result_err;
     }
-    struct json* setting_root = json_parse(setting_json, (struct string){.data=setting_vec.data,.size=setting_vec.size});
-    loop(server_socket, address, setting_root);
+    *setting_root = json_parse(setting_json, (struct string){.data=setting_vec->data,.size=setting_vec->size});
+    return result_ok;
 }
-int main() {
+enum result main2() {
+    char setting_data[BUFFER_SIZE];
+    struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
+    struct json setting_json[BUFFER_SIZE / sizeof(struct json)];
+    struct json* setting_root;
     int server_socket;
     struct sockaddr_in address;
-    if(init(&server_socket, &address) == result_err) {
+    if(init_setting(&setting_vec, setting_json, &setting_root) == result_err) {
+        printf("init_setting\n");
+        return result_err;
+    }
+    if(init_socket(&server_socket, &address) == result_err) {
+        printf("init_socket\n");
+        return result_err;
+    }
+    loop(server_socket, &address, setting_root);
+}
+int main() {
+    if(init_limit() == result_err) {
         printf("init\n\n");
         return 0;
     }
-    if(main2(server_socket, &address) == result_err) {
+    if(main2() == result_err) {
         printf("loop\n\n");
-    }
-    if(deinit(server_socket) == result_err) {
-        printf("deinit\n\n");
     }
     return 0;
 }
