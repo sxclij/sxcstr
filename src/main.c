@@ -387,82 +387,8 @@ void json_tovec(struct vec* dst, struct json* src) {
     json_tovec_internal(dst, src);
     vec_tostr(dst); // Null-terminate the string
 }
-
-void json_test() {
-    struct json example_json[BUFFER_SIZE];
-    char example_text_data[BUFFER_SIZE];
-    struct vec example_text_vec = (struct vec){.data = example_text_data, .size = 0};
-    const char *example_str =
-        "{"
-        "\"user_id\": \"user987\","
-        "\"username\": \"johndoe123\","
-        "\"email\": \"john.doe@example.com\","
-        "\"first_name\": \"John\","
-        "\"last_name\": \"Doe\","
-        "\"date_of_birth\": \"1993-05-15\","
-        "\"addresses\": ["
-            "{"
-            "\"type\": \"home\","
-            "\"street\": \"123 Main Street\","
-            "\"city\": \"Anytown\","
-            "\"state\": \"CA\","
-            "\"zip\": \"90210\","
-            "\"country\": \"USA\""
-            "},"
-            "{"
-            "\"type\": \"work\","
-            "\"street\": \"456 Business Ave\","
-            "\"city\": \"Techville\","
-            "\"state\": \"WA\","
-            "\"zip\": \"98005\","
-            "\"country\": \"USA\""
-            "}"
-        "],"
-        "\"phone_numbers\": ["
-            "\"555-123-4567\","
-            "\"555-987-6543\""
-        "],"
-        "\"preferences\": {"
-            "\"language\": \"en\","
-            "\"currency\": \"USD\","
-            "\"notifications\": {"
-            "\"email\": true,"
-            "\"sms\": false"
-            "}"
-        "},"
-        "\"last_login\": \"2023-10-27T10:00:00Z\","
-        "\"is_active\": true"
-        "}";
-    struct json* example_root = json_parse(example_json, (struct string){.data=example_str, .size = strlen(example_str)});
-    struct json* example_preferences = json_get(example_root, (struct string){.data="preferences", .size = strlen("preferences")});
-    json_tovec(&example_text_vec, example_preferences);
-    printf("Preferences: %s\n", example_text_vec.data);
-
-    struct vec email_vec = (struct vec){.data = example_text_data, .size = 0};
-    struct json* example_email = json_get(example_root, (struct string){.data="email", .size = strlen("email")});
-    json_tovec(&email_vec, example_email);
-    printf("Email: %s\n", email_vec.data);
-
-    struct vec addresses_vec = (struct vec){.data = example_text_data, .size = 0};
-    struct json* example_addresses = json_get(example_root, (struct string){.data="addresses", .size = strlen("addresses")});
-    json_tovec(&addresses_vec, example_addresses);
-    printf("Addresses: %s\n", addresses_vec.data);
-
-    struct vec first_address_street_vec = (struct vec){.data = example_text_data, .size = 0};
-    // Need to handle array indexing, current json_get doesn't support it directly
-    // For now, let's get the "addresses" array and manually traverse (not ideal)
-    if (example_addresses && example_addresses->val) {
-        struct json* first_address = example_addresses->val; // Assuming the first element is the lhs
-        if (first_address) {
-            struct json* street = json_get(first_address, (struct string){.data="street", .size = strlen("street")});
-            json_tovec(&first_address_street_vec, street);
-            printf("First Address Street: %s\n", first_address_street_vec.data);
-        }
-    }
-}
-enum result file_read(struct vec* dst, struct vec* path) {
-    vec_tostr(path);
-    FILE* fp = fopen(path->data, "r");
+enum result file_read_str(struct vec* dst, const char* path) {
+    FILE* fp = fopen(path, "r");
     if (!fp) {
         dst->size = 0;
         return result_err;
@@ -474,12 +400,17 @@ enum result file_read(struct vec* dst, struct vec* path) {
     fclose(fp);
     return result_ok;
 }
-enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
+enum result file_read_vec(struct vec* dst, struct vec* path) {
+    vec_tostr(path);
+    return file_read_str(dst, path->data);
+}
+enum result handle_get(struct vec* send_vec, struct vec* recv_vec, struct json* setting_root) {
     char file_data[BUFFER_SIZE];
     char path_data[BUFFER_SIZE];
+    char contenttype_data[BUFFER_SIZE];
     struct vec file_vec = (struct vec){.data = file_data, .size = 0};
     struct vec path_vec = (struct vec){.data = path_data, .size = 0};
-    const char* content_type;
+    struct vec contenttype_vec = (struct vec){.data = contenttype_data, .size = 0};
     char* path_start = strstr(recv_vec->data, "/");
     char* path_end = strstr(path_start, " ");
     char* path_ext;
@@ -498,57 +429,18 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
         vec_cat_str(&path_vec, ".html");
     }
     vec_tostr(&path_vec);
-    path_ext = strrchr(path_vec.data, '.');
-    if (!path_ext) {
-        content_type = "application/octet-stream";
-    } else if (strcmp(path_ext, ".html") == 0 || strcmp(path_ext, ".htm") == 0) {
-        content_type = "text/html";
-    } else if (strcmp(path_ext, ".txt") == 0) {
-        content_type = "text/plain";
-    } else if (strcmp(path_ext, ".xml") == 0) {
-        content_type = "application/xml";
-    } else if (strcmp(path_ext, ".css") == 0) {
-        content_type = "text/css";
-    } else if (strcmp(path_ext, ".js") == 0) {
-        content_type = "application/javascript";
-    } else if (strcmp(path_ext, ".png") == 0) {
-        content_type = "image/png";
-    } else if (strcmp(path_ext, ".jpg") == 0 || strcmp(path_ext, ".jpeg") == 0) {
-        content_type = "image/jpeg";
-    } else if (strcmp(path_ext, ".ico") == 0) {
-        content_type = "image/x-icon";
-    } else if (strcmp(path_ext, ".svg") == 0) {
-        content_type = "image/svg+xml";
-    } else if (strcmp(path_ext, ".webp") == 0) {
-        content_type = "image/webp";
-    } else if (strcmp(path_ext, ".json") == 0) {
-        content_type = "application/json";
-    } else if (strcmp(path_ext, ".woff") == 0) {
-        content_type = "font/woff";
-    } else if (strcmp(path_ext, ".woff2") == 0) {
-        content_type = "font/woff2";
-    } else if (strcmp(path_ext, ".ttf") == 0) {
-        content_type = "font/ttf";
-    } else if (strcmp(path_ext, ".otf") == 0) {
-        content_type = "font/otf";
-    } else if (strcmp(path_ext, ".mp4") == 0) {
-        content_type = "video/mp4";
-    } else if (strcmp(path_ext, ".webm") == 0) {
-        content_type = "video/webm";
-    } else if (strcmp(path_ext, ".mov") == 0) {
-        content_type = "video/quicktime";
-    } else {
-        content_type = "application/octet-stream";
-    }
-    if(file_read(&file_vec, &path_vec) == result_err) {
+    path_ext = strrchr(path_vec.data, '.') + 1;
+    struct json* contenttype_node = json_get(setting_root, (struct string){.data=path_ext, .size=path_end - path_ext});
+    json_tovec(&contenttype_vec, contenttype_node);
+    if(file_read_vec(&file_vec, &path_vec) == result_err) {
         printf("file_read %s\n", path_vec.data);
         return result_err;
     }
-    send_vec->size = sprintf(send_vec->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, file_vec.size);
+    send_vec->size = sprintf(send_vec->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", contenttype_vec.data, file_vec.size);
     memcpy(send_vec->data + send_vec->size, file_vec.data, file_vec.size);
     send_vec->size += file_vec.size;
 }
-enum result handle(int client_socket) {
+enum result handle(int client_socket, struct json* setting_root) {
     char send_data[BUFFER_SIZE];
     char recv_data[BUFFER_SIZE];
     struct vec send_vec = (struct vec){.data = send_data, .size = 0};
@@ -560,7 +452,7 @@ enum result handle(int client_socket) {
     }
     recv_vec.size = bytes_received;
     if(memcmp(recv_vec.data, "GET ", 4) == 0) {
-        if(handle_get(&send_vec, &recv_vec) == result_err) {
+        if(handle_get(&send_vec, &recv_vec, setting_root) == result_err) {
             printf("handle_get\n\n");
             return result_ok;
         }
@@ -568,7 +460,7 @@ enum result handle(int client_socket) {
     }
     return result_ok;
 }
-enum result loop(int server_socket, struct sockaddr_in* address) {
+enum result loop(int server_socket, struct sockaddr_in* address, struct json* setting_root) {
     int address_length = sizeof(address);
     int client_socket;
     while (1) {
@@ -577,7 +469,7 @@ enum result loop(int server_socket, struct sockaddr_in* address) {
             printf("accept\n\n");
             continue;
         }
-        if(handle(client_socket) == result_err) {
+        if(handle(client_socket, setting_root) == result_err) {
             printf("handle\n");
             close(client_socket);
             return result_err;
@@ -609,29 +501,39 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
         printf("setrlimit\n");
         return result_err;
     }
-    // *server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    // if (*server_socket == 0) {
-    //     printf("socket\n");
-    //     return result_err;
-    // }
-    // if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option))) {
-    //     printf("setsockopt\n");
-    //     return result_err;
-    // }
-    // address->sin_family = AF_INET;
-    // address->sin_addr.s_addr = INADDR_ANY;
-    // address->sin_port = htons(PORT);
-    // if (bind(*server_socket, (struct sockaddr*)address, sizeof(*address)) < 0) {
-    //     printf("bind\n");
-    //     return result_err;
-    // }
-    // if (listen(*server_socket, SOMAXCONN) < 0) {
-    //     printf("listen\n");
-    //     return result_err;
-    // }
+    *server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (*server_socket == 0) {
+        printf("socket\n");
+        return result_err;
+    }
+    if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option))) {
+        printf("setsockopt\n");
+        return result_err;
+    }
+    address->sin_family = AF_INET;
+    address->sin_addr.s_addr = INADDR_ANY;
+    address->sin_port = htons(PORT);
+    if (bind(*server_socket, (struct sockaddr*)address, sizeof(*address)) < 0) {
+        printf("bind\n");
+        return result_err;
+    }
+    if (listen(*server_socket, SOMAXCONN) < 0) {
+        printf("listen\n");
+        return result_err;
+    }
     return result_ok;
 }
-
+enum result main2(int server_socket, struct sockaddr_in* address) {
+    char setting_data[BUFFER_SIZE];
+    struct json setting_json[BUFFER_SIZE];
+    struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
+    if(file_read_str(&setting_vec, "./routes/setting.json") == result_err) {
+        printf("read setting.json\n");
+        return result_err;
+    }
+    struct json* setting_root = json_parse(setting_json, (struct string){.data=setting_vec.data,.size=setting_vec.size});
+    loop(server_socket, address, setting_root);
+}
 int main() {
     int server_socket;
     struct sockaddr_in address;
@@ -639,8 +541,7 @@ int main() {
         printf("init\n\n");
         return 0;
     }
-    json_test();
-    if(loop(server_socket, &address) == result_err) {
+    if(main2(server_socket, &address) == result_err) {
         printf("loop\n\n");
     }
     if(deinit(server_socket) == result_err) {
