@@ -529,8 +529,8 @@ enum result init_setting(struct vec* setting_vec, struct json* setting_json, str
 }
 enum result main2() {
     char setting_data[BUFFER_SIZE];
-    struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
     struct json setting_json[BUFFER_SIZE / sizeof(struct json)];
+    struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
     struct json* setting_root;
     int server_socket;
     struct sockaddr_in address;
