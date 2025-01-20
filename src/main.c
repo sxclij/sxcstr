@@ -8,28 +8,41 @@
 
 #define PORT 8080
 #define BUFFER_SIZE (1024 * 1024 * 16)
-#define RLIMIT_SIZE (1024 * 1024 * 128)
+#define RLIMIT_SIZE (1024 * 1024 * 1024)
 
 enum result {
     result_ok,
     result_err,
 };
+enum jsontype {
+    json_type_key,
+    json_type_val,
+    json_type_arr,
+};
 struct string {
     const char* data;
-    const uint32_t size;
+    uint32_t size;
 };
 struct vec {
     char* data;
     uint32_t size;
 };
+struct json {
+    struct string string;
+    uint64_t hash;
+    uint64_t random;
+    struct json* val;
+    struct json* lhs;
+    struct json* rhs;
+};
 
 void vec_cpy(struct vec* dst, struct string src) {
     memcpy(dst->data, src.data, src.size);
-    dst->size = src.size;    
+    dst->size = src.size;
 }
 void vec_cat(struct vec* dst, struct string src) {
     memcpy(dst->data + dst->size, src.data, src.size);
-    dst->size += src.size;    
+    dst->size += src.size;
 }
 void vec_tostr(struct vec* dst) {
     dst->data[dst->size] = '\0';
@@ -40,9 +53,342 @@ void vec_cpy_str(struct vec* dst, const char* src) {
 void vec_cat_str(struct vec* dst, const char* src) {
     vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
 }
-enum result file_read(struct vec* dst, struct vec* path) {
-    vec_tostr(path);
-    FILE* fp = fopen(path->data, "r");
+uint64_t string_hash(struct string src) {
+    uint64_t x = 0;
+    for (int i = 0; i < src.size; i++) {
+        x <<= 8;
+        x |= src.data[i];
+    }
+    return x;
+}
+int json_isspace(char ch) {
+    return (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r');
+}
+int json_issign(char ch) {
+    return (ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',');
+}
+uint64_t json_random(uint64_t x) {
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    return x;
+}
+struct json* json_newnode(struct json** dst_end, uint64_t* random, struct string string) {
+    struct json* x = *dst_end;
+    *random = json_random(*random);
+    *x = (struct json){
+        .string = string,
+        .hash = string_hash(string),
+        .random = *random,
+        .val = NULL,
+        .lhs = NULL,
+        .rhs = NULL};
+    *dst_end += 1;
+    return x;
+}
+struct json* json_treap_rightrotate(struct json* y) {
+    struct json* x = y->lhs;
+    struct json* T2 = x->rhs;
+    x->rhs = y;
+    y->lhs = T2;
+    return x;
+}
+struct json* json_treap_leftrotate(struct json* x) {
+    struct json* y = x->rhs;
+    struct json* T2 = y->lhs;
+    y->lhs = x;
+    x->rhs = T2;
+    return y;
+}
+struct json* json_treap_insert(struct json* root, struct json* x) {
+    if (root == NULL) {
+        return x;
+    }
+    if (x->random > root->random) {
+        if (x->hash < root->hash) {
+            root->lhs = json_treap_insert(root->lhs, x);
+            return json_treap_rightrotate(root);
+        } else {
+            root->rhs = json_treap_insert(root->rhs, x);
+            return json_treap_leftrotate(root);
+        }
+    } else {
+        if (x->hash < root->hash) {
+            root->lhs = json_treap_insert(root->lhs, x);
+        } else {
+            root->rhs = json_treap_insert(root->rhs, x);
+        }
+        return root;
+    }
+}
+void json_tokenize(struct string* dst, struct string src) {
+    struct string* dst_end = dst;
+    const char* current = src.data;
+    const char* end = src.data + src.size;
+
+    while (current < end) {
+        if (json_isspace(*current)) {
+            current++;
+            continue;
+        }
+        if (*current == '"') {
+            const char* start = current + 1;
+            const char* end_quote = NULL;
+            current++;
+            while (current < end) {
+                if (*current == '"') {
+                    end_quote = current;
+                    break;
+                }
+                if (*current == '\\' && current + 1 < end) {
+                    current += 2;
+                } else {
+                    current++;
+                }
+            }
+            if (end_quote != NULL) {
+                *dst_end = (struct string){.data = start, .size = end_quote - start};
+                dst_end++;
+                current++;
+                continue;
+            } else {
+                fprintf(stderr, "Error: Unterminated string literal.\n");
+                return;
+            }
+        }
+        if (json_issign(*current)) {
+            *dst_end = (struct string){.data = current, .size = 1};
+            dst_end++;
+            current++;
+            continue;
+        }
+        const char* token_start = current;
+        while (current < end && !json_isspace(*current) && !json_issign(*current)) {
+            current++;
+        }
+        if (current > token_start) {
+            *dst_end = (struct string){.data = token_start, .size = current - token_start};
+            dst_end++;
+        }
+    }
+    *dst_end = (struct string){.data = NULL, .size = 0};
+}
+
+struct json* json_parse(struct json* dst, struct string src) {
+    struct string token[BUFFER_SIZE];
+    struct json* stack_json[BUFFER_SIZE];
+    struct json* stack_back[BUFFER_SIZE];
+    enum jsontype stack_type[BUFFER_SIZE];
+    struct json* dst_end = dst;
+    struct string* token_itr = token;
+    int nest = 0;
+    uint64_t random = 1;
+
+    json_tokenize(token, src); // Tokenize the input JSON string.
+    token_itr = token;
+
+    stack_json[0] = NULL;
+    stack_back[0] = NULL;
+    stack_type[0] = json_type_key;
+
+    while (token_itr->data != NULL) {
+        if (token_itr->size == 1 && token_itr->data[0] == '{') {
+            nest++;
+            stack_json[nest] = NULL;
+            stack_back[nest] = NULL; // Initialize stack_back for the new level
+            stack_type[nest] = json_type_key;
+        } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
+            nest++;
+            stack_json[nest] = NULL;
+            stack_back[nest] = NULL; // Initialize stack_back for the new level
+            stack_type[nest] = json_type_arr;
+        } else if ((token_itr->size == 1 && token_itr->data[0] == '}') || (token_itr->size == 1 && token_itr->data[0] == ']')) {
+            struct json* currentnode = stack_json[nest];
+            nest--;
+            if (nest >= 0) { // Ensure we don't access negative indices
+                if (stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
+                    stack_json[nest] = json_treap_insert(stack_json[nest], currentnode);
+                } else if (stack_type[nest] == json_type_val && stack_back[nest] != NULL) {
+                    stack_back[nest]->val = json_treap_insert(stack_back[nest]->val, currentnode);
+                }
+            }
+        } else if (token_itr->size == 1 && token_itr->data[0] == ':') {
+            stack_type[nest] = json_type_val;
+        } else if (token_itr->size == 1 && token_itr->data[0] == ',') {
+            if (stack_type[nest] == json_type_val) {
+                stack_type[nest] = json_type_key;
+            } else if (nest > 0 && stack_type[nest - 1] == json_type_arr) {
+                stack_type[nest] = json_type_arr;
+            }
+        } else {
+            struct json* newnode = json_newnode(&dst_end, &random, *token_itr);
+            if (nest >= 0) {
+                if (stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
+                    stack_json[nest] = json_treap_insert(stack_json[nest], newnode);
+                    stack_back[nest] = newnode;
+                } else if (stack_type[nest] == json_type_val && stack_back[nest] != NULL) {
+                    stack_back[nest]->val = json_treap_insert(stack_back[nest]->val, newnode);
+                }
+            }
+        }
+        token_itr++;
+    }
+
+    return stack_json[0];
+}
+
+struct json* json_find(struct json* root, uint64_t hash) {
+    struct json* current = root;
+    while (current != NULL) {
+        if (hash == current->hash) {
+            return current;
+        } else if (hash < current->hash) {
+            current = current->lhs;
+        } else {
+            current = current->rhs;
+        }
+    }
+    return NULL;
+}
+
+struct json* json_get(struct json* root, struct string path) {
+    const char* start = path.data;
+    const char* end = path.data + path.size;
+    const char* current = start;
+    struct json* node = root;
+
+    while (current < end && node != NULL) {
+        if (*current == '.') {
+            current++;
+            continue;
+        }
+
+        const char* key_start = current;
+        while (current < end && *current != '.') {
+            current++;
+        }
+        struct string key = {.data = key_start, .size = current - key_start};
+        uint64_t key_hash = string_hash(key);
+
+        if (node) {
+            node = json_find(node, key_hash);
+            if (node && node->val) {
+                node = node->val; // Move to the value of the key
+            } else if (!node) {
+                return NULL; // Key not found at this level
+            }
+        }
+    }
+    return node;
+}
+
+void json_tovec_internal(struct vec* dst, struct json* src);
+
+// Helper function to escape special characters in strings
+void json_escape_string(struct vec* dst, struct string str) {
+    for (uint32_t i = 0; i < str.size; i++) {
+        switch (str.data[i]) {
+            case '"':
+                vec_cat_str(dst, "\\\"");
+                break;
+            case '\\':
+                vec_cat_str(dst, "\\\\");
+                break;
+            case '/':
+                vec_cat_str(dst, "\\/");
+                break;
+            case '\b':
+                vec_cat_str(dst, "\\b");
+                break;
+            case '\f':
+                vec_cat_str(dst, "\\f");
+                break;
+            case '\n':
+                vec_cat_str(dst, "\\n");
+                break;
+            case '\r':
+                vec_cat_str(dst, "\\r");
+                break;
+            case '\t':
+                vec_cat_str(dst, "\\t");
+                break;
+            default:
+                {
+                    char ch = str.data[i];
+                    vec_cat(dst, (struct string){.data = &ch, .size = 1});
+                }
+                break;
+        }
+    }
+}
+
+void json_tovec_object(struct vec* dst, struct json* src) {
+    if (!src) return;
+    vec_cat_str(dst, "{");
+    struct json* current = src;
+    int first = 1;
+    void json_tovec_object_internal(struct vec* dst, struct json* node, int* first) {
+        if (!node) return;
+        json_tovec_object_internal(dst, node->lhs, first);
+        if (!*first) {
+            vec_cat_str(dst, ",");
+        }
+        *first = 0;
+        vec_cat_str(dst, "\"");
+        json_escape_string(dst, node->string);
+        vec_cat_str(dst, "\":");
+        json_tovec_internal(dst, node->val);
+        json_tovec_object_internal(dst, node->rhs, first);
+    }
+    json_tovec_object_internal(dst, src, &first);
+    vec_cat_str(dst, "}");
+}
+
+void json_tovec_array(struct vec* dst, struct json* src) {
+    if (!src) return;
+    vec_cat_str(dst, "[");
+    struct json* current = src;
+    int first = 1;
+    while (current) {
+        if (!first) {
+            vec_cat_str(dst, ",");
+        }
+        first = 0;
+        json_tovec_internal(dst, current);
+        current = current->rhs; // Assuming array elements are linked via rhs
+    }
+    vec_cat_str(dst, "]");
+}
+
+void json_tovec_string(struct vec* dst, struct json* src) {
+    if (!src) return;
+    vec_cat_str(dst, "\"");
+    json_escape_string(dst, src->string);
+    vec_cat_str(dst, "\"");
+}
+
+void json_tovec_internal(struct vec* dst, struct json* src) {
+    if (!src) return;
+
+    // Heuristic to determine type: if it has children in lhs/rhs, it's likely an object
+    if (src->lhs || src->rhs) {
+        json_tovec_object(dst, src);
+    } else if (src->val) { // If val is set, and not an object, it could be an array element
+        json_tovec_internal(dst, src->val); // Render the value directly
+    }
+     else {
+        // Otherwise, treat it as a primitive value (string, number, boolean, null)
+        json_tovec_string(dst, src);
+    }
+}
+
+void json_tovec(struct vec* dst, struct json* src) {
+    dst->size = 0; // Reset the vec
+    json_tovec_internal(dst, src);
+    vec_tostr(dst); // Null-terminate the string
+}
+enum result file_read_str(struct vec* dst, const char* path) {
+    FILE* fp = fopen(path, "r");
     if (!fp) {
         dst->size = 0;
         return result_err;
@@ -54,12 +400,17 @@ enum result file_read(struct vec* dst, struct vec* path) {
     fclose(fp);
     return result_ok;
 }
-enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
+enum result file_read_vec(struct vec* dst, struct vec* path) {
+    vec_tostr(path);
+    return file_read_str(dst, path->data);
+}
+enum result handle_get(struct vec* send_vec, struct vec* recv_vec, struct json* setting_root) {
     char file_data[BUFFER_SIZE];
     char path_data[BUFFER_SIZE];
+    char contenttype_data[BUFFER_SIZE];
     struct vec file_vec = (struct vec){.data = file_data, .size = 0};
     struct vec path_vec = (struct vec){.data = path_data, .size = 0};
-    const char* content_type;
+    struct vec contenttype_vec = (struct vec){.data = contenttype_data, .size = 0};
     char* path_start = strstr(recv_vec->data, "/");
     char* path_end = strstr(path_start, " ");
     char* path_ext;
@@ -78,57 +429,18 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec) {
         vec_cat_str(&path_vec, ".html");
     }
     vec_tostr(&path_vec);
-    path_ext = strrchr(path_vec.data, '.');
-    if (!path_ext) {
-        content_type = "application/octet-stream";
-    } else if (strcmp(path_ext, ".html") == 0 || strcmp(path_ext, ".htm") == 0) {
-        content_type = "text/html";
-    } else if (strcmp(path_ext, ".txt") == 0) {
-        content_type = "text/plain";
-    } else if (strcmp(path_ext, ".xml") == 0) {
-        content_type = "application/xml";
-    } else if (strcmp(path_ext, ".css") == 0) {
-        content_type = "text/css";
-    } else if (strcmp(path_ext, ".js") == 0) {
-        content_type = "application/javascript";
-    } else if (strcmp(path_ext, ".png") == 0) {
-        content_type = "image/png";
-    } else if (strcmp(path_ext, ".jpg") == 0 || strcmp(path_ext, ".jpeg") == 0) {
-        content_type = "image/jpeg";
-    } else if (strcmp(path_ext, ".ico") == 0) {
-        content_type = "image/x-icon";
-    } else if (strcmp(path_ext, ".svg") == 0) {
-        content_type = "image/svg+xml";
-    } else if (strcmp(path_ext, ".webp") == 0) {
-        content_type = "image/webp";
-    } else if (strcmp(path_ext, ".json") == 0) {
-        content_type = "application/json";
-    } else if (strcmp(path_ext, ".woff") == 0) {
-        content_type = "font/woff";
-    } else if (strcmp(path_ext, ".woff2") == 0) {
-        content_type = "font/woff2";
-    } else if (strcmp(path_ext, ".ttf") == 0) {
-        content_type = "font/ttf";
-    } else if (strcmp(path_ext, ".otf") == 0) {
-        content_type = "font/otf";
-    } else if (strcmp(path_ext, ".mp4") == 0) {
-        content_type = "video/mp4";
-    } else if (strcmp(path_ext, ".webm") == 0) {
-        content_type = "video/webm";
-    } else if (strcmp(path_ext, ".mov") == 0) {
-        content_type = "video/quicktime";
-    } else {
-        content_type = "application/octet-stream";
-    }
-    if(file_read(&file_vec, &path_vec) == result_err) {
+    path_ext = strrchr(path_vec.data, '.') + 1;
+    struct json* contenttype_node = json_get(setting_root, (struct string){.data=path_ext, .size=path_end - path_ext});
+    json_tovec(&contenttype_vec, contenttype_node);
+    if(file_read_vec(&file_vec, &path_vec) == result_err) {
         printf("file_read %s\n", path_vec.data);
         return result_err;
     }
-    send_vec->size = sprintf(send_vec->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", content_type, file_vec.size);
+    send_vec->size = sprintf(send_vec->data, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n", contenttype_vec.data, file_vec.size);
     memcpy(send_vec->data + send_vec->size, file_vec.data, file_vec.size);
     send_vec->size += file_vec.size;
 }
-enum result handle(int client_socket) {
+enum result handle(int client_socket, struct json* setting_root) {
     char send_data[BUFFER_SIZE];
     char recv_data[BUFFER_SIZE];
     struct vec send_vec = (struct vec){.data = send_data, .size = 0};
@@ -140,7 +452,7 @@ enum result handle(int client_socket) {
     }
     recv_vec.size = bytes_received;
     if(memcmp(recv_vec.data, "GET ", 4) == 0) {
-        if(handle_get(&send_vec, &recv_vec) == result_err) {
+        if(handle_get(&send_vec, &recv_vec, setting_root) == result_err) {
             printf("handle_get\n\n");
             return result_ok;
         }
@@ -148,16 +460,16 @@ enum result handle(int client_socket) {
     }
     return result_ok;
 }
-enum result loop(int server_socket, struct sockaddr_in* address) {
+enum result loop(int server_socket, struct sockaddr_in* address, struct json* setting_root) {
     int address_length = sizeof(address);
     int client_socket;
     while (1) {
         client_socket = accept(server_socket, (struct sockaddr*)address, &address_length);
         if (client_socket < 0) {
-            printf("accept\n");
+            printf("accept\n\n");
             continue;
         }
-        if(handle(client_socket) == result_err) {
+        if(handle(client_socket, setting_root) == result_err) {
             printf("handle\n");
             close(client_socket);
             return result_err;
@@ -194,7 +506,7 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
         printf("socket\n");
         return result_err;
     }
-    if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &option, sizeof(option))) {
+    if (setsockopt(*server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option))) {
         printf("setsockopt\n");
         return result_err;
     }
@@ -211,7 +523,17 @@ enum result init(int* server_socket, struct sockaddr_in* address) {
     }
     return result_ok;
 }
-
+enum result main2(int server_socket, struct sockaddr_in* address) {
+    char setting_data[BUFFER_SIZE];
+    struct json setting_json[BUFFER_SIZE / sizeof(struct json)];
+    struct vec setting_vec = (struct vec){.data = setting_data, .size = 0};
+    if(file_read_str(&setting_vec, "./routes/setting.json") == result_err) {
+        printf("read setting.json\n");
+        return result_err;
+    }
+    struct json* setting_root = json_parse(setting_json, (struct string){.data=setting_vec.data,.size=setting_vec.size});
+    loop(server_socket, address, setting_root);
+}
 int main() {
     int server_socket;
     struct sockaddr_in address;
@@ -219,7 +541,7 @@ int main() {
         printf("init\n\n");
         return 0;
     }
-    if(loop(server_socket, &address) == result_err) {
+    if(main2(server_socket, &address) == result_err) {
         printf("loop\n\n");
     }
     if(deinit(server_socket) == result_err) {
