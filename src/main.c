@@ -174,6 +174,20 @@ void json_tokenize(struct string* dst, struct string src) {
     *dst_end = (struct string){.data = NULL, .size = 0};
 }
 
+struct json* json_find(struct json* root, uint64_t hash) {
+    struct json* current = root;
+    while (current != NULL) {
+        if (hash == current->hash) {
+            return current;
+        } else if (hash < current->hash) {
+            current = current->lhs;
+        } else {
+            current = current->rhs;
+        }
+    }
+    return NULL;
+}
+
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
     struct json* stack_json[BUFFER_SIZE];
@@ -184,7 +198,7 @@ struct json* json_parse(struct json* dst, struct string src) {
     int nest = 0;
     uint64_t random = 1;
 
-    json_tokenize(token, src); // Tokenize the input JSON string.
+    json_tokenize(token, src);
     token_itr = token;
 
     stack_json[0] = NULL;
@@ -195,17 +209,17 @@ struct json* json_parse(struct json* dst, struct string src) {
         if (token_itr->size == 1 && token_itr->data[0] == '{') {
             nest++;
             stack_json[nest] = NULL;
-            stack_back[nest] = NULL; // Initialize stack_back for the new level
+            stack_back[nest] = NULL;
             stack_type[nest] = json_type_key;
         } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
             nest++;
             stack_json[nest] = NULL;
-            stack_back[nest] = NULL; // Initialize stack_back for the new level
+            stack_back[nest] = NULL;
             stack_type[nest] = json_type_arr;
         } else if ((token_itr->size == 1 && token_itr->data[0] == '}') || (token_itr->size == 1 && token_itr->data[0] == ']')) {
             struct json* currentnode = stack_json[nest];
             nest--;
-            if (nest >= 0) { // Ensure we don't access negative indices
+            if (nest >= 0) {
                 if (stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
                     stack_json[nest] = json_treap_insert(stack_json[nest], currentnode);
                 } else if (stack_type[nest] == json_type_val && stack_back[nest] != NULL) {
@@ -237,54 +251,34 @@ struct json* json_parse(struct json* dst, struct string src) {
     return stack_json[0];
 }
 
-struct json* json_find(struct json* root, uint64_t hash) {
-    struct json* current = root;
-    while (current != NULL) {
-        if (hash == current->hash) {
-            return current;
-        } else if (hash < current->hash) {
-            current = current->lhs;
-        } else {
-            current = current->rhs;
-        }
-    }
-    return NULL;
-}
-
 struct json* json_get(struct json* root, struct string path) {
     const char* start = path.data;
     const char* end = path.data + path.size;
     const char* current = start;
     struct json* node = root;
-
     while (current < end && node != NULL) {
         if (*current == '.') {
             current++;
             continue;
         }
-
         const char* key_start = current;
         while (current < end && *current != '.') {
             current++;
         }
         struct string key = {.data = key_start, .size = current - key_start};
         uint64_t key_hash = string_hash(key);
-
         if (node) {
             node = json_find(node, key_hash);
             if (node && node->val) {
-                node = node->val; // Move to the value of the key
+                node = node->val;
             } else if (!node) {
-                return NULL; // Key not found at this level
+                return NULL;
             }
         }
     }
     return node;
 }
 
-void json_tovec_internal(struct vec* dst, struct json* src);
-
-// Helper function to escape special characters in strings
 void json_escape_string(struct vec* dst, struct string str) {
     for (uint32_t i = 0; i < str.size; i++) {
         switch (str.data[i]) {
@@ -322,70 +316,77 @@ void json_escape_string(struct vec* dst, struct string str) {
     }
 }
 
-void json_tovec_object(struct vec* dst, struct json* src) {
+void json_tovec_no_recursion(struct vec* dst, struct json* src) {
+    dst->size = 0;
     if (!src) return;
-    vec_cat_str(dst, "{");
-    struct json* current = src;
-    int first = 1;
-    void json_tovec_object_internal(struct vec* dst, struct json* node, int* first) {
-        if (!node) return;
-        json_tovec_object_internal(dst, node->lhs, first);
-        if (!*first) {
-            vec_cat_str(dst, ",");
+
+    struct json* stack[BUFFER_SIZE];
+    int top = -1;
+    stack[++top] = src;
+    int is_first[BUFFER_SIZE];
+    is_first[top] = 1;
+
+    while (top >= 0) {
+        struct json* current = stack[top];
+
+        if (current->lhs || current->rhs) { // Object
+            if (is_first[top]) {
+                vec_cat_str(dst, "{");
+                is_first[top] = 0;
+                struct json* child = current;
+                while (child) {
+                    stack[++top] = child->lhs;
+                    is_first[top] = (child == current);
+                    child = child->rhs;
+                }
+                continue;
+            } else {
+                // Object element processing
+                if (current->lhs) {
+                    vec_cat_str(dst, ",");
+                    vec_cat_str(dst, "\"");
+                    json_escape_string(dst, current->string);
+                    vec_cat_str(dst, "\":");
+                    stack[top] = current->val;
+                    is_first[top] = 1;
+                    continue;
+                }
+            }
+            vec_cat_str(dst, "}");
+            top--;
+        } else if (current->val) { // Array
+            if (is_first[top]) {
+                vec_cat_str(dst, "[");
+                is_first[top] = 0;
+                struct json* child = current->val;
+                while (child) {
+                    stack[++top] = child;
+                    is_first[top] = (child == current->val);
+                    child = child->rhs;
+                }
+                continue;
+            } else {
+                if (current) {
+                    vec_cat_str(dst, ",");
+                    json_tovec_no_recursion(dst, current); // This line still has recursion
+                }
+            }
+            vec_cat_str(dst, "]");
+            top--;
+        } else { // String
+            vec_cat_str(dst, "\"");
+            json_escape_string(dst, current->string);
+            vec_cat_str(dst, "\"");
+            top--;
         }
-        *first = 0;
-        vec_cat_str(dst, "\"");
-        json_escape_string(dst, node->string);
-        vec_cat_str(dst, "\":");
-        json_tovec_internal(dst, node->val);
-        json_tovec_object_internal(dst, node->rhs, first);
     }
-    json_tovec_object_internal(dst, src, &first);
-    vec_cat_str(dst, "}");
-}
-
-void json_tovec_array(struct vec* dst, struct json* src) {
-    if (!src) return;
-    vec_cat_str(dst, "[");
-    struct json* current = src;
-    int first = 1;
-    while (current) {
-        if (!first) {
-            vec_cat_str(dst, ",");
-        }
-        first = 0;
-        json_tovec_internal(dst, current);
-        current = current->rhs; // Assuming array elements are linked via rhs
-    }
-    vec_cat_str(dst, "]");
-}
-
-void json_tovec_string(struct vec* dst, struct json* src) {
-    if (!src) return;
-    vec_cat_str(dst, "\"");
-    json_escape_string(dst, src->string);
-    vec_cat_str(dst, "\"");
-}
-
-void json_tovec_internal(struct vec* dst, struct json* src) {
-    if (!src) return;
-
-    // Heuristic to determine type: if it has children in lhs/rhs, it's likely an object
-    if (src->lhs || src->rhs) {
-        json_tovec_object(dst, src);
-    } else if (src->val) { // If val is set, and not an object, it could be an array element
-        json_tovec_internal(dst, src->val); // Render the value directly
-    }
-     else {
-        // Otherwise, treat it as a primitive value (string, number, boolean, null)
-        json_tovec_string(dst, src);
-    }
+    vec_tostr(dst);
 }
 
 void json_tovec(struct vec* dst, struct json* src) {
-    dst->size = 0; // Reset the vec
-    json_tovec_internal(dst, src);
-    vec_tostr(dst); // Null-terminate the string
+    dst->size = 0;
+    json_tovec_no_recursion(dst, src);
+    vec_tostr(dst);
 }
 enum result file_read_str(struct vec* dst, const char* path) {
     FILE* fp = fopen(path, "r");
