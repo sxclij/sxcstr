@@ -19,12 +19,12 @@ enum jsontype {
     json_type_val,
     json_type_arr,
 };
-struct string {
-    const char* data;
-    uint32_t size;
-};
 struct vec {
     char* data;
+    uint32_t size;
+};
+struct string {
+    const char* data;
     uint32_t size;
 };
 struct json {
@@ -36,6 +36,18 @@ struct json {
     struct json* rhs;
 };
 
+struct string str_tostring(const char* src) {
+    return (struct string){.data = src, .size = strlen(src)};
+}
+struct string itr_tostring(const char* begin, const char* end) {
+    return (struct string){.data = begin, .size = end - begin};
+}
+struct string prim_tostring(const char* begin, uint32_t size) {
+    return (struct string){.data = begin, .size = size};
+}
+struct string vec_tostring(struct vec* src) {
+    return (struct string){.data = src->data, .size = src->size};
+}
 void vec_cpy(struct vec* dst, struct string src) {
     memcpy(dst->data, src.data, src.size);
     dst->size = src.size;
@@ -48,10 +60,10 @@ void vec_tostr(struct vec* dst) {
     dst->data[dst->size] = '\0';
 }
 void vec_cpy_str(struct vec* dst, const char* src) {
-    vec_cpy(dst, (struct string){.data = src, .size = strlen(src)});
+    vec_cpy(dst, str_tostring(src));
 }
 void vec_cat_str(struct vec* dst, const char* src) {
-    vec_cat(dst, (struct string){.data = src, .size = strlen(src)});
+    vec_cat(dst, str_tostring(src));
 }
 uint64_t string_hash(struct string src) {
     uint64_t x = 5381;
@@ -146,7 +158,7 @@ void json_tokenize(struct string* dst, struct string src) {
                 }
             }
             if (end_quote != NULL) {
-                *dst_end = (struct string){.data = start, .size = end_quote - start};
+                *dst_end = prim_tostring(start, end_quote - start);
                 dst_end++;
                 current++;
                 continue;
@@ -156,7 +168,7 @@ void json_tokenize(struct string* dst, struct string src) {
             }
         }
         if (json_issign(*current)) {
-            *dst_end = (struct string){.data = current, .size = 1};
+            *dst_end = prim_tostring(current, 1);
             dst_end++;
             current++;
             continue;
@@ -166,11 +178,11 @@ void json_tokenize(struct string* dst, struct string src) {
             current++;
         }
         if (current > token_start) {
-            *dst_end = (struct string){.data = token_start, .size = current - token_start};
+            *dst_end = prim_tostring(token_start, current - token_start);
             dst_end++;
         }
     }
-    *dst_end = (struct string){.data = NULL, .size = 0};
+    *dst_end = prim_tostring(NULL, 0);
 }
 
 struct json* json_find(struct json* root, uint64_t hash) {
@@ -308,7 +320,7 @@ void json_escape_string(struct vec* dst, struct string str) {
             default:
                 {
                     char ch = str.data[i];
-                    vec_cat(dst, (struct string){.data = &ch, .size = 1});
+                    vec_cat(dst, prim_tostring(&ch, 1));
                 }
                 break;
         }
@@ -421,7 +433,7 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec, struct json* 
         vec_cpy_str(&path_vec, "./routes/favicon.svg");
     } else {
         vec_cpy_str(&path_vec, "./routes");
-        vec_cat(&path_vec, (struct string){.data = path_start, .size = path_size});
+        vec_cat(&path_vec, itr_tostring(path_start, path_end));
     }
     vec_tostr(&path_vec);
     path_ext = strrchr(path_vec.data, '.');
@@ -430,7 +442,7 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec, struct json* 
     }
     vec_tostr(&path_vec);
     path_ext = strrchr(path_vec.data, '.') + 1;
-    struct json* contenttype_node = json_get(setting_root, (struct string){.data=path_ext, .size=path_end - path_ext});
+    struct json* contenttype_node = json_get(setting_root, itr_tostring(path_ext, path_end));
     json_tovec(&contenttype_vec, contenttype_node);
     if(file_read_vec(&file_vec, &path_vec) == result_err) {
         printf("file_read %s\n", path_vec.data);
@@ -523,7 +535,7 @@ enum result init_setting(struct vec* setting_vec, struct json* setting_json, str
         printf("read setting.json\n");
         return result_err;
     }
-    *setting_root = json_parse(setting_json, (struct string){.data=setting_vec->data,.size=setting_vec->size});
+    *setting_root = json_parse(setting_json, vec_tostring(setting_vec));
     return result_ok;
 }
 enum result main2() {
