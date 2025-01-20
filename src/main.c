@@ -38,11 +38,11 @@ struct json {
 
 void vec_cpy(struct vec* dst, struct string src) {
     memcpy(dst->data, src.data, src.size);
-    dst->size = src.size;    
+    dst->size = src.size;
 }
 void vec_cat(struct vec* dst, struct string src) {
     memcpy(dst->data + dst->size, src.data, src.size);
-    dst->size += src.size;    
+    dst->size += src.size;
 }
 void vec_tostr(struct vec* dst) {
     dst->data[dst->size] = '\0';
@@ -55,7 +55,7 @@ void vec_cat_str(struct vec* dst, const char* src) {
 }
 uint64_t string_hash(struct string src) {
     uint64_t x = 0;
-    for(int i=0;i<src.size;i++) {
+    for (int i = 0; i < src.size; i++) {
         x <<= 8;
         x |= src.data[i];
     }
@@ -68,9 +68,9 @@ int json_issign(char ch) {
     return (ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',');
 }
 uint64_t json_random(uint64_t x) {
-	x ^= x << 13;
-	x ^= x >> 7;
-	x ^= x << 17;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
     return x;
 }
 struct json* json_newnode(struct json** dst_end, uint64_t* random, struct string string) {
@@ -79,11 +79,10 @@ struct json* json_newnode(struct json** dst_end, uint64_t* random, struct string
     *x = (struct json){
         .string = string,
         .hash = string_hash(string),
-        .random = *random, 
-        .val = NULL, 
-        .lhs = NULL, 
-        .rhs = NULL
-    };
+        .random = *random,
+        .val = NULL,
+        .lhs = NULL,
+        .rhs = NULL};
     *dst_end += 1;
     return x;
 }
@@ -196,36 +195,40 @@ struct json* json_parse(struct json* dst, struct string src) {
         if (token_itr->size == 1 && token_itr->data[0] == '{') {
             nest++;
             stack_json[nest] = NULL;
-            stack_back[0] = NULL;
+            stack_back[nest] = NULL; // Initialize stack_back for the new level
             stack_type[nest] = json_type_key;
         } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
             nest++;
             stack_json[nest] = NULL;
-            stack_back[0] = NULL;
+            stack_back[nest] = NULL; // Initialize stack_back for the new level
             stack_type[nest] = json_type_arr;
         } else if ((token_itr->size == 1 && token_itr->data[0] == '}') || (token_itr->size == 1 && token_itr->data[0] == ']')) {
             struct json* currentnode = stack_json[nest];
             nest--;
-            if(stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
-                stack_json[nest] = json_treap_insert(stack_json[nest], currentnode);
-            } else if(stack_type[nest] == json_type_val) {
-                stack_json[nest]->val = json_treap_insert(stack_json[nest]->val, currentnode);
+            if (nest >= 0) { // Ensure we don't access negative indices
+                if (stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
+                    stack_json[nest] = json_treap_insert(stack_json[nest], currentnode);
+                } else if (stack_type[nest] == json_type_val && stack_back[nest] != NULL) {
+                    stack_back[nest]->val = json_treap_insert(stack_back[nest]->val, currentnode);
+                }
             }
         } else if (token_itr->size == 1 && token_itr->data[0] == ':') {
             stack_type[nest] = json_type_val;
         } else if (token_itr->size == 1 && token_itr->data[0] == ',') {
-            if(stack_type[nest] == json_type_val) {
+            if (stack_type[nest] == json_type_val) {
                 stack_type[nest] = json_type_key;
-            } else if(stack_type[nest-1] == json_type_arr) {
+            } else if (nest > 0 && stack_type[nest - 1] == json_type_arr) {
                 stack_type[nest] = json_type_arr;
-            } 
+            }
         } else {
             struct json* newnode = json_newnode(&dst_end, &random, *token_itr);
-            if(stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
-                stack_json[nest] = json_treap_insert(stack_json[nest], newnode);
-                stack_back[nest] = newnode;
-            } else if(stack_type[nest] == json_type_val) {
-                stack_back[nest]->val = json_treap_insert(stack_back[nest]->val, newnode);
+            if (nest >= 0) {
+                if (stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
+                    stack_json[nest] = json_treap_insert(stack_json[nest], newnode);
+                    stack_back[nest] = newnode;
+                } else if (stack_type[nest] == json_type_val && stack_back[nest] != NULL) {
+                    stack_back[nest]->val = json_treap_insert(stack_back[nest]->val, newnode);
+                }
             }
         }
         token_itr++;
@@ -234,18 +237,176 @@ struct json* json_parse(struct json* dst, struct string src) {
     return stack_json[0];
 }
 
-struct json* json_get(struct json* root, struct string* path) {
-
+struct json* json_find(struct json* root, uint64_t hash) {
+    struct json* current = root;
+    while (current != NULL) {
+        if (hash == current->hash) {
+            return current;
+        } else if (hash < current->hash) {
+            current = current->lhs;
+        } else {
+            current = current->rhs;
+        }
+    }
+    return NULL;
 }
-void json_tovec(struct vec* dst, struct json* src) {
 
+struct json* json_get(struct json* root, struct string path) {
+    const char* start = path.data;
+    const char* end = path.data + path.size;
+    const char* current = start;
+    struct json* node = root;
+
+    while (current < end && node != NULL) {
+        if (*current == '.') {
+            current++;
+            continue;
+        }
+
+        const char* key_start = current;
+        while (current < end && *current != '.') {
+            current++;
+        }
+        struct string key = {.data = key_start, .size = current - key_start};
+        uint64_t key_hash = string_hash(key);
+
+        if (node) {
+            node = json_find(node, key_hash);
+            if (node && node->val) {
+                node = node->val; // Move to the value of the key
+            } else if (!node) {
+                return NULL; // Key not found at this level
+            }
+        }
+    }
+    return node;
+}
+void json_tovec_internal(struct vec* dst, struct json* src, int is_key) {
+    if (!src) return;
+
+    if (is_key) {
+        vec_cat_str(dst, "\"");
+        vec_cat(dst, src->string);
+        vec_cat_str(dst, "\"");
+    } else if (src->val == NULL && src->lhs == NULL && src->rhs == NULL) { // It's a simple value
+        vec_cat(dst, src->string);
+    } else {
+        // Check if it's an array or an object
+        int is_array = 1;
+        struct json* temp = src->val;
+        while(temp) {
+            if (temp->string.size > 0 && (temp->string.data[0] == '{' || temp->string.data[0] == '"')) {
+                is_array = 0;
+                break;
+            }
+            temp = temp->rhs;
+        }
+
+        if (is_array) {
+            vec_cat_str(dst, "[");
+            struct json* current = src->val;
+            int first = 1;
+            while (current) {
+                if (!first) vec_cat_str(dst, ",");
+                json_tovec_internal(dst, current, 0);
+                current = current->rhs;
+                first = 0;
+            }
+            vec_cat_str(dst, "]");
+        } else {
+            vec_cat_str(dst, "{");
+            struct json* current = src->val;
+            int first = 1;
+            while (current) {
+                if (!first) vec_cat_str(dst, ",");
+                json_tovec_internal(dst, current, 1);
+                vec_cat_str(dst, ":");
+                json_tovec_internal(dst, current->val, 0);
+                current = current->rhs;
+                first = 0;
+            }
+            vec_cat_str(dst, "}");
+        }
+    }
+}
+
+void json_tovec(struct vec* dst, struct json* src) {
+    dst->size = 0; // Reset the vector
+    json_tovec_internal(dst, src, 0);
+    vec_tostr(dst);
 }
 
 void json_test() {
     struct json example_json[BUFFER_SIZE];
-    const char *example_str = "{\"name\": \"John Doe\", \"age\": 30, \"city\": \"Tokyo\", \"items\": [\"apple\", \"orange\"]}";
+    char example_text_data[BUFFER_SIZE];
+    struct vec example_text_vec = (struct vec){.data = example_text_data, .size = 0};
+    const char *example_str =
+        "{"
+        "\"user_id\": \"user987\","
+        "\"username\": \"johndoe123\","
+        "\"email\": \"john.doe@example.com\","
+        "\"first_name\": \"John\","
+        "\"last_name\": \"Doe\","
+        "\"date_of_birth\": \"1993-05-15\","
+        "\"addresses\": ["
+            "{"
+            "\"type\": \"home\","
+            "\"street\": \"123 Main Street\","
+            "\"city\": \"Anytown\","
+            "\"state\": \"CA\","
+            "\"zip\": \"90210\","
+            "\"country\": \"USA\""
+            "},"
+            "{"
+            "\"type\": \"work\","
+            "\"street\": \"456 Business Ave\","
+            "\"city\": \"Techville\","
+            "\"state\": \"WA\","
+            "\"zip\": \"98005\","
+            "\"country\": \"USA\""
+            "}"
+        "],"
+        "\"phone_numbers\": ["
+            "\"555-123-4567\","
+            "\"555-987-6543\""
+        "],"
+        "\"preferences\": {"
+            "\"language\": \"en\","
+            "\"currency\": \"USD\","
+            "\"notifications\": {"
+            "\"email\": true,"
+            "\"sms\": false"
+            "}"
+        "},"
+        "\"last_login\": \"2023-10-27T10:00:00Z\","
+        "\"is_active\": true"
+        "}";
     struct json* example_root = json_parse(example_json, (struct string){.data=example_str, .size = strlen(example_str)});
-    return;
+    struct json* example_preferences = json_get(example_root, (struct string){.data="preferences", .size = strlen("preferences")});
+    json_tovec(&example_text_vec, example_preferences);
+    printf("Preferences: %s\n", example_text_vec.data);
+
+    struct vec email_vec = (struct vec){.data = example_text_data, .size = 0};
+    struct json* example_email = json_get(example_root, (struct string){.data="email", .size = strlen("email")});
+    json_tovec(&email_vec, example_email);
+    printf("Email: %s\n", email_vec.data);
+
+    struct vec addresses_vec = (struct vec){.data = example_text_data, .size = 0};
+    struct json* example_addresses = json_get(example_root, (struct string){.data="addresses", .size = strlen("addresses")});
+    json_tovec(&addresses_vec, example_addresses);
+    printf("Addresses: %s\n", addresses_vec.data);
+
+    struct vec first_address_street_vec = (struct vec){.data = example_text_data, .size = 0};
+    // Need to handle array indexing, current json_get doesn't support it directly
+    // For now, let's get the "addresses" array and manually traverse (not ideal)
+    if (example_addresses && example_addresses->val) {
+        struct json* first_address = example_addresses->val; // Assuming the first element is the lhs
+        if (first_address) {
+            struct json* street = json_get(first_address, (struct string){.data="street", .size = strlen("street")});
+            json_tovec(&first_address_street_vec, street);
+            printf("First Address Street: %s\n", first_address_street_vec.data);
+        }
+    }
 }
 enum result file_read(struct vec* dst, struct vec* path) {
     vec_tostr(path);
