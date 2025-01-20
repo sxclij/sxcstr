@@ -14,6 +14,11 @@ enum result {
     result_ok,
     result_err,
 };
+enum jsontype {
+    json_type_key,
+    json_type_val,
+    json_type_arr,
+};
 struct string {
     const char* data;
     uint32_t size;
@@ -173,12 +178,8 @@ void json_tokenize(struct string* dst, struct string src) {
 struct json* json_parse(struct json* dst, struct string src) {
     struct string token[BUFFER_SIZE];
     struct json* stack_json[BUFFER_SIZE];
-    struct json* tail_json[BUFFER_SIZE];
-    enum {
-        json_type_key,
-        json_type_val,
-        json_type_arr,
-    } stack_type[BUFFER_SIZE];
+    struct json* stack_back[BUFFER_SIZE];
+    enum jsontype stack_type[BUFFER_SIZE];
     struct json* dst_end = dst;
     struct string* token_itr = token;
     int nest = 0;
@@ -188,19 +189,19 @@ struct json* json_parse(struct json* dst, struct string src) {
     token_itr = token;
 
     stack_json[0] = NULL;
-    tail_json[0] = NULL;
+    stack_back[0] = NULL;
     stack_type[0] = json_type_key;
 
     while (token_itr->data != NULL) {
         if (token_itr->size == 1 && token_itr->data[0] == '{') {
             nest++;
             stack_json[nest] = NULL;
-            tail_json[0] = NULL;
+            stack_back[0] = NULL;
             stack_type[nest] = json_type_key;
         } else if (token_itr->size == 1 && token_itr->data[0] == '[') {
             nest++;
             stack_json[nest] = NULL;
-            tail_json[0] = NULL;
+            stack_back[0] = NULL;
             stack_type[nest] = json_type_arr;
         } else if ((token_itr->size == 1 && token_itr->data[0] == '}') || (token_itr->size == 1 && token_itr->data[0] == ']')) {
             struct json* currentnode = stack_json[nest];
@@ -222,9 +223,9 @@ struct json* json_parse(struct json* dst, struct string src) {
             struct json* newnode = json_newnode(&dst_end, &random, *token_itr);
             if(stack_type[nest] == json_type_key || stack_type[nest] == json_type_arr) {
                 stack_json[nest] = json_treap_insert(stack_json[nest], newnode);
-                tail_json[nest] = newnode;
+                stack_back[nest] = newnode;
             } else if(stack_type[nest] == json_type_val) {
-                tail_json[nest]->val = json_treap_insert(tail_json[nest]->val, newnode);
+                stack_back[nest]->val = json_treap_insert(stack_back[nest]->val, newnode);
             }
         }
         token_itr++;
@@ -234,6 +235,10 @@ struct json* json_parse(struct json* dst, struct string src) {
 }
 
 struct json* json_get(struct json* root, struct string* path) {
+
+}
+void json_tovec(struct vec* dst, struct json* src) {
+
 }
 
 void json_test() {
