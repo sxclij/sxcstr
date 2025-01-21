@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nostr Client - Improved</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .warning {
+      background: #ffe4e4;
+      border: 1px solid #ff4444;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .status-indicator {
+      padding: 5px 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .connected { background: #dfffdf; color: #2a662a; }
+    .disconnected { background: #ffe8e8; color: #662a2a; }
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .note {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .note-header {
+      font-size: 0.9em;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .note-content {
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Improved Nostr Client</h1>
+    
+    <div class="warning">
+      ⚠️ WARNING: Never share your private keys. This is experimental software.
+    </div>
+
+    <div id="connection-status" class="status-indicator disconnected">
+      Status: Disconnected
+    </div>
+
+    <div class="relay-control">
+      <input type="url" id="relayUrl" value="wss://relay.damus.io" 
+             placeholder="wss://relay.url" pattern="^wss?://.+">
+      <button id="connectButton">Connect</button>
+    </div>
+
+    <div class="publish-section">
+      <h3>Publish Note</h3>
+      <textarea id="noteContent" placeholder="Share something..." 
+                maxlength="500"></textarea>
+      <div class="char-count">
+        <span id="charCount">0</span>/500 characters
+      </div>
+      <div class="auth-options">
+        <input type="password" id="privateKey" 
+               placeholder="nsec or hex key (temporary)">
+        <button id="publishButton">Publish Securely</button>
+        <button id="nip07Button">Sign with Extension (NIP-07)</button>
+      </div>
+    </div>
+
+    <div id="notes"></div>
+  </div>
+
+  <script src="https://unpkg.com/nostr-tools@1.13.0/lib/nostr.bundle.js"></script>
+  <script>
+    let socket;
+    let activeSubscriptions = new Set();
+
+    // DOM Elements
+    const elements = {
+      status: document.getElementById('connection-status'),
+      connectButton: document.getElementById('connectButton'),
+      publishButton: document.getElementById('publishButton'),
+      nip07Button: document.getElementById('nip07Button'),
+      noteContent: document.getElementById('noteContent'),
+      privateKey: document.getElementById('privateKey'),
+      notes: document.getElementById('notes'),
+      charCount: document.getElementById('charCount')
+    };
+
+    // Event Listeners
+    elements.connectButton.addEventListener('click', connectToRelay);
+    elements.publishButton.addEventListener('click', publishNote);
+    elements.nip07Button.addEventListener('click', publishWithNIP07);
+    elements.noteContent.addEventListener('input', updateCharCount);
+
+    // Initialize
+    checkNIP07Support();
+    updateCharCount();
+
+    function updateCharCount() {
+      elements.charCount.textContent = elements.noteContent.value.length;
+    }
+
+    function setStatus(connected) {
+      elements.status.textContent = `Status: ${connected ? 'Connected' : 'Disconnected'}`;
+      elements.status.className = `status-indicator ${connected ? 'connected' : 'disconnected'}`;
+    }
+
+    async function connectToRelay() {
+      const relayUrl = document.getElementById('relayUrl').value;
+      if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+        alert('Please use a valid WebSocket URL (wss:// or ws://)');
+        return;
+      }
+
+      if (socket) socket.close();
+      socket = new WebSocket(relayUrl);
+
+      socket.onopen = () => {
+        setStatus(true);
+        subscribeToNotes();
+      };
+
+      socket.onmessage = (e) => {
+        try {
+          const [type, subId, event] = JSON.parse(e.data);
+          if (type === 'EVENT' && event?.kind === 1) {
+            displayNote(event);
+          }
+        } catch (error) {
+          console.warn('Error parsing message:', error);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setStatus(false);
+      };
+
+      socket.onclose = () => {
+        setStatus(false);
+        activeSubscriptions.clear();
+      };
+    }
+
+    function subscribeToNotes() {
+      const subId = `sub-${Date.now()}`;
+      activeSubscriptions.add(subId);
+      
+      const filter = {
+        kinds: [1],
+        limit: 50,
+        since: Math.floor(Date.now() / 1000) - 86400 // 24 hours
+      };
+      
+      socket.send(JSON.stringify(['REQ', subId, filter]));
+    }
+
+    function displayNote(event) {
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note';
+      
+      const date = new Date(event.created_at * 1000).toLocaleString();
+      const safeContent = event.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      noteElement.innerHTML = `
+        <div class="note-header">
+          <span class="pubkey">${NostrTools.nip19.npubEncode(event.pubkey).slice(0, 12)}...</span>
+          <span class="timestamp">${date}</span>
+        </div>
+        <div class="note-content">${safeContent}</div>
+      `;
+      
+      elements.notes.prepend(noteElement);
+    }
+
+    async function publishNote() {
+      const content = elements.noteContent.value.trim();
+      const privateKey = elements.privateKey.value.trim();
+
+      if (!content) return alert('Please enter some content');
+      if (!privateKey) return alert('Please provide a private key');
+
+      try {
+        const sk = privateKey.startsWith('nsec1') 
+          ? NostrTools.nip19.decode(privateKey).data
+          : privateKey;
+
+        const event = createBaseEvent(content, NostrTools.getPublicKey(sk));
+        event.sig = await NostrTools.signEvent(event, sk);
+        sendEvent(event);
+        
+        elements.noteContent.value = '';
+        elements.privateKey.value = '';
+      } catch (error) {
+        alert(`Publishing failed: ${error.message}`);
+      }
+    }
+
+
+    function createBaseEvent(content, pubkey) {
+      return {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content,
+        pubkey,
+        id: '',
+        sig: ''
+      };
+    }
+
+    async function publishWithNIP07() {
+      if (!window.nostr) {
+        alert('No NIP-07 extension detected');
+        return;
+      }
+
+      const content = elements.noteContent.value.trim();
+      if (!content) return alert('Please enter some content');
+
+      try {
+        const pubkey = await window.nostr.getPublicKey();
+        const baseEvent = createBaseEvent(content, pubkey);
+        const signedEvent = await window.nostr.signEvent(baseEvent);
+        sendEvent(signedEvent);
+        
+        elements.noteContent.value = '';
+      } catch (error) {
+        alert(`Extension signing failed: ${error.message}`);
+      }
+    }
+
+    function sendEvent(event) {
+      if (!event.id) {
+        event.id = NostrTools.getEventHash(event);
+      }
+      socket.send(JSON.stringify(['EVENT', event]));
+    }
+  </script>
+</body>
+</html>
