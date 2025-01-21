@@ -3,66 +3,154 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nostr Client - Improved</title>
+  <title>Nostr Client - Dark</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      margin: 20px;
-      background: #f0f0f0;
-      color: #333;
+    :root {
+      --bg: #121212;
+      --surface: #1e1e1e;
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --text: #e0e0e0;
+      --text-muted: #9e9e9e;
+      --border: #333333;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
     }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
     .container {
       max-width: 800px;
       margin: 0 auto;
+      padding: 2rem 1rem;
     }
+
     .warning {
-      background: #ffe4e4;
-      border: 1px solid #ff4444;
-      padding: 15px;
-      border-radius: 5px;
-      margin-bottom: 20px;
-    }
-    .status-indicator {
-      padding: 5px 10px;
-      border-radius: 3px;
-      display: inline-block;
-    }
-    .connected { background: #dfffdf; color: #2a662a; }
-    .disconnected { background: #ffe8e8; color: #662a2a; }
-    textarea {
-      width: 100%;
-      height: 100px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin: 10px 0;
-    }
-    .note {
-      background: white;
-      padding: 15px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--error);
+      padding: 1rem;
       border-radius: 8px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+      backdrop-filter: blur(4px);
+      color: var(--text);
     }
+
+    .status-indicator {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .status-indicator::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .connected { color: var(--success); }
+    .disconnected { color: var(--error); }
+
+    .relay-control {
+      display: flex;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    input, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem;
+      border-radius: 8px;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+
+    .note {
+      background: var(--surface);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+      transition: transform 0.2s;
+    }
+
+    .note:hover {
+      transform: translateY(-2px);
+    }
+
     .note-header {
-      font-size: 0.9em;
-      color: #666;
-      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
     }
+
     .note-content {
-      line-height: 1.5;
       white-space: pre-wrap;
+      color: var(--text);
     }
+
     button {
-      background: #007bff;
+      background: var(--primary);
       color: white;
       border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
       cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    button:hover { background: #0056b3; }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .auth-options {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .char-count {
+      text-align: right;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin: 0.5rem 0;
+    }
+
+    #notes {
+      margin-top: 2rem;
+      display: grid;
+      gap: 1rem;
+    }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
