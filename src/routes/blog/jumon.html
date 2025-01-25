@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nostr Client</title>
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+</head>
+<body>
+    <h1>Nostr Client</h1>
+    
+    <!-- Relay Connection -->
+    <div>
+        <input type="text" id="relayUrl" placeholder="wss://relay.url">
+        <button onclick="connectRelay()">Connect Relay</button>
+    </div>
+    
+    <!-- Note Publishing -->
+    <div>
+        <textarea id="noteContent" placeholder="Enter your note"></textarea>
+        <button onclick="publishNote()">Publish Note</button>
+    </div>
+    
+    <!-- Note Viewing -->
+    <div>
+        <button onclick="viewNotes()">View Notes</button>
+        <div id="notesDisplay" style="border:1px solid #ccc; padding:10px; margin:10px;"></div>
+    </div>
+
+    <script>
+        let relay = null;
+        let activeSubscription = null;
+
+        // Connect to Relay
+        async function connectRelay() {
+            const relayUrl = document.getElementById('relayUrl').value;
+            if (!relayUrl) return alert('Relay URL required');
+            
+            try {
+                if (relay) relay.close();
+                relay = await window.NostrTools.Relay.connect(relayUrl);
+                alert('Connected to relay: ' + relayUrl);
+            } catch (error) {
+                alert('Connection failed: ' + error.message);
+            }
+        }
+
+        // Publish Note with NIP-07
+        async function publishNote() {
+            if (!relay) return alert('Connect to relay first');
+            if (!window.nostr) return alert('NIP-07 extension not detected');
+            
+            const content = document.getElementById('noteContent').value;
+            if (!content) return alert('Note content required');
+
+            try {
+                const pubkey = await window.nostr.getPublicKey();
+                const event = {
+                    kind: 1,
+                    pubkey: pubkey,
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [],
+                    content: content
+                };
+                
+                const signedEvent = await window.nostr.signEvent(event);
+                await relay.publish(signedEvent);
+                alert('Note published successfully!');
+            } catch (error) {
+                alert('Publish error: ' + error.message);
+            }
+        }
+
+        // View Notes from Relay
+        function viewNotes() {
+            if (!relay) return alert('Connect to relay first');
+            if (activeSubscription) activeSubscription.close();
+            
+            const displayDiv = document.getElementById('notesDisplay');
+            displayDiv.innerHTML = 'Loading notes...';
+            
+            activeSubscription = relay.subscribe(
+                [{ kinds: [1], limit: 100 }],
+                {
+                    onevent(event) {
+                        const noteDiv = document.createElement('div');
+                        noteDiv.innerHTML = `<strong>${event.pubkey.slice(0, 8)}:</strong> ${event.content}`;
+                        displayDiv.appendChild(noteDiv);
+                    },
+                    oneose() {
+                        displayDiv.innerHTML += '<br>Subscription complete';
+                    }
+                }
+            );
+        }
+    </script>
+</body>
+</html>
