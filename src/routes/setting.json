@@ -20,5 +20,9 @@
         "mp4": "video/mp4",
         "webm": "video/webm",
         "mov": "video/quicktime"
+    },
+    "password": {
+        "thissite": "1145141919810",
+        "docker": "889464ks"
     }
 }
