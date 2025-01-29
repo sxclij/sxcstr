@@ -419,8 +419,6 @@ enum result handle_get(struct vec* send_vec, struct vec* recv_vec, struct json* 
     uint32_t path_size = path_end - path_start;
     if(memcmp(path_start, "/", 1) == 0 && path_size == 1) {
         vec_cpy_str(&path_vec, "./routes/index.html");
-    } else if(memcmp(path_start, "/favicon.ico", 12) == 0 && path_size == 12) {
-        vec_cpy_str(&path_vec, "./routes/favicon.svg");
     } else {
         vec_cpy_str(&path_vec, "./routes");
         vec_cat(&path_vec, itr_tostring(path_start, path_end));
