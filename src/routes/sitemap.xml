@@ -7,16 +7,28 @@
         <priority>1.0</priority>
     </url>
     <url>
+        <loc>https://www.sxclij.com/story/0001</loc>
+        <lastmod>2025-01-30</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://www.sxclij.com/story/0002</loc>
+        <lastmod>2025-01-30</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
         <loc>https://www.sxclij.com/blog/dictionary</loc>
         <lastmod>2025-01-21</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
+        <priority>0.6</priority>
     </url>
     <url>
         <loc>https://www.sxclij.com/blog/neuralrendering</loc>
         <lastmod>2025-01-19</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
+        <priority>0.6</priority>
     </url>
     <url>
         <loc>https://www.sxclij.com/daily/20241231</loc>
