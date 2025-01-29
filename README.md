@@ -29,13 +29,13 @@ The server is built with the following principles:
 1.  Clone the repository:
 
     ```bash
-    git clone <repository_url>
-    cd <repository_name>
+    git clone https://github.com/sxclij/sxclijcom
+    cd sxclijcom/src
     ```
 2.  Compile the code:
 
     ```bash
-    gcc -o main src/main.c
+    gcc -o main main.c
     ```
 
 ## Usage
