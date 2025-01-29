@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>sxclij</title>
-    <meta name="description" content="sxclijさんのお手製サイト" />
+    <meta name="description" content="sxclijのポートフォリオサイト" />
     <link rel="stylesheet" href="/style.css">
 </head>
 
@@ -27,7 +27,7 @@
     <main>
         <section id="hero" class="hero">
             <h1>sxclij.com</h1>
-            <p>お手製HTTPサーバ in C言語。malloc不使用オーガニック。</p>
+            <p>お手製HTTPサーバ in C言語。malloc不使用のオーガニック設計。</p>
         </section>
 
         <section id="about" class="about">
@@ -38,16 +38,20 @@
                     <p>無所属 / 無職</p>
                 </div>
                 <div class="box-item">
-                    <h3>好きな言語</h3>
-                    <p>C / Go / Rust</p>
+                    <h3>好きなプログラミング言語</h3>
+                    <p>C / CUDA C++ / Rust / Go</p>
                 </div>
                 <div class="box-item">
                     <h3>趣味</h3>
-                    <p>読書 / 音ゲー / Nostr</p>
+                    <p>読書 / 筋トレ / 健康</p>
                 </div>
                 <div class="box-item">
                     <h3>好きなデータ構造</h3>
                     <p>Array / Treap / Red-black tree</p>
+                </div>
+                <div class="box-item">
+                    <h3>好きな食べ物</h3>
+                    <p>サイコロステーキ</p>
                 </div>
                 <div class="box-item">
                     <h3>連絡先</h3>
@@ -55,7 +59,7 @@
                 </div>
             </div>
         </section>
-        
+
         <section id="certifications" class="certifications">
             <h2>Certifications</h2>
             <div class="box-list">
@@ -71,23 +75,19 @@
             <div class="box-list">
                 <div class="box-item">
                     <h3>C言語</h3>
-                    <p>一番経験年数が長く、一番得意で、一番好みの言語です。動的メモリ確保やライブラリ、再帰関数を縛りつつ、自作言語、UEFIアプリケーション、テキストエディタ、webサイトなどを作ってきました。小学生の頃から触ってきましたが、中学の頃に一度ソースコードを全て失ってしまったので、実際に持っている知識に対してGitHubに上げている成果物が少ない言語でもあります。
-                    </p>
+                    <p>最も経験が長く、得意で好みの言語。動的メモリ確保なしで、自作言語、UEFIアプリ、テキストエディタ、Webサイトなどを開発。</p>
                 </div>
                 <div class="box-item">
                     <h3>インフラ</h3>
-                    <p>自宅のサーバーでMinecraftやArkなどゲームのサーバー、このウェブサイトや家族の写真サーバーを立てたり保守したりしています。特に、ArchLinux、VirtualBox、DockerCompose、Sambaなどを好んで触っています。
-                    </p>
+                    <p>自宅サーバーでMinecraftやArkのゲームサーバー、家族の写真管理システムを運用。ArchLinux、DockerCompose、Sambaなどを活用。</p>
                 </div>
                 <div class="box-item">
                     <h3>Webバックエンド</h3>
-                    <p>個人的にはC、TypeScript、Go、Rustが好みですが、必要に迫られてJavaScript、PHP、Pythonなどを触ったりもします。最近は設計とチューニング以外はLLMに任せっきりで、ほとんど確認作業のようになっている分野でもあります。
-                    </p>
+                    <p>C、TypeScript、Go、Rustが好み。必要に応じてPHP、Pythonも使用。最近は設計とチューニングが主で、実装はLLMに任せがち。</p>
                 </div>
                 <div class="box-item">
                     <h3>Webフロントエンド</h3>
-                    <p>始めてから一番日が浅い分野です。特に生のHTMLファイルを触ることを得意としています。流れとしては 生のHTMLファイル > React > Svelteという感じで、流行に乗ってReactを触ろうとしたものの、パフォーマンスが思うように出ずSvelteに流れ着きました。数年前までは必要に迫られて嫌々書いていましたが、最近はChatGPTやClaude、Geminiと会話しながら楽しく書けるようになってきました。
-                    </p>
+                    <p>HTMLを直接扱うのが得意。React → Svelteの流れで学習。最近はAIと対話しながら楽しく開発中。</p>
                 </div>
             </div>
         </section>
@@ -96,19 +96,16 @@
             <h2>Works</h2>
             <div class="box-list">
                 <div class="box-item">
-                    <h3><a href="https://github.com/sxclij/sxceditor2" target="_blank"
-                            rel="noopener noreferrer">sxceditor2</a></h3>
-                    <p>コンパクトなお手製テキストエディタ。C言語製。Qiitaに投稿した解説記事では（不思議なことに）150件のいいねを獲得しています。</p>
+                    <h3><a href="https://github.com/sxclij/sxceditor2" target="_blank" rel="noopener noreferrer">sxceditor2</a></h3>
+                    <p>コンパクトなC言語製テキストエディタ。Qiitaの解説記事で100件以上のいいねを獲得。</p>
                 </div>
                 <div class="box-item">
-                    <h3><a href="https://github.com/sxclij/sxcscript" target="_blank"
-                            rel="noopener noreferrer">sxcscript</a></h3>
-                    <p>お手製プログラミング言語。Scratch上で動作する独自のコンパイラやインタプリタも開発しています。</p>
+                    <h3><a href="https://github.com/sxclij/sxcscript" target="_blank" rel="noopener noreferrer">sxcscript</a></h3>
+                    <p>自作プログラミング言語。Scratch上で動作する独自のコンパイラ・インタプリタを開発。</p>
                 </div>
                 <div class="box-item">
-                    <h3><a href="https://github.com/sxclij/sxcstr" target="_blank"
-                            rel="noopener noreferrer">sxcstr</a></h3>
-                    <p>シンプルなHTTPサーバー。実質的に私が管理しているこのウェブサイトのリポジトリそのもの。 個人的に書いたコードの中でも、特に丁寧に作ったものになります。</p>
+                    <h3><a href="https://github.com/sxclij/sxclijcom" target="_blank" rel="noopener noreferrer">sxclijcom</a></h3>
+                    <p>シンプルなHTTPサーバー。このWebサイトのバックエンドそのもの。</p>
                 </div>
             </div>
         </section>
@@ -165,10 +162,10 @@
                     <li><a href="/daily/20250123">2025/01/23</a></li>
                     <li><a href="/daily/20250124">2025/01/24</a></li>
                     <li><a href="/daily/20250125">2025/01/25</a></li>
-                    <li><a href="/daily/20250125">2025/01/25</a></li>
                     <li><a href="/daily/20250126">2025/01/26</a></li>
                     <li><a href="/daily/20250127">2025/01/27</a></li>
                     <li><a href="/daily/20250128">2025/01/28</a></li>
+                    <li><a href="/daily/20250129">2025/01/29</a></li>
                 </ul>
             </article>
         </section>
