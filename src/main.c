@@ -541,7 +541,11 @@ enum result main2() {
         printf("init_socket\n");
         return result_err;
     }
-    loop(server_socket, &address, setting_root);
+    if(loop(server_socket, &address, setting_root) == result_err) {
+        printf("loop\n");
+        return result_err;
+    }
+    return result_ok;
 }
 int main() {
     if(init_limit() == result_err) {
@@ -549,7 +553,7 @@ int main() {
         return 0;
     }
     if(main2() == result_err) {
-        printf("loop\n\n");
+        printf("main\n\n");
     }
     return 0;
 }
