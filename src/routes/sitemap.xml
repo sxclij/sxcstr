@@ -7,26 +7,26 @@
         <priority>1.0</priority>
     </url>
     <url>
-        <loc>https://www.sxclij.com/novel/0001</loc>
-        <lastmod>2025-01-30</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
-    </url>
-    <url>
-        <loc>https://www.sxclij.com/novel/0002</loc>
-        <lastmod>2025-01-30</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
-    </url>
-    <url>
         <loc>https://www.sxclij.com/blog/dictionary</loc>
         <lastmod>2025-01-21</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://www.sxclij.com/blog/neuralnetwork</loc>
+        <lastmod>2025-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://www.sxclij.com/novel/0001</loc>
+        <lastmod>2025-01-30</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
-        <loc>https://www.sxclij.com/blog/neuralrendering</loc>
-        <lastmod>2025-01-19</lastmod>
+        <loc>https://www.sxclij.com/novel/0002</loc>
+        <lastmod>2025-01-30</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
     </url>
@@ -195,6 +195,12 @@
     <url>
         <loc>https://www.sxclij.com/daily/20250130</loc>
         <lastmod>2025-01-30</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://www.sxclij.com/daily/20250131</loc>
+        <lastmod>2025-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
