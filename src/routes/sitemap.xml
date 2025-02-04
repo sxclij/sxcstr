@@ -222,4 +222,10 @@
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
+    <url>
+        <loc>https://www.sxclij.com/daily/20250204</loc>
+        <lastmod>2025-02-04</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
 </urlset>
