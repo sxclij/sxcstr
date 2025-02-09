@@ -278,18 +278,35 @@
       let currentCharIndex = 0;
       let totalTyped = 0;
       let errorCount = 0;
+      let shuffledTextLines = []; // Array to hold shuffled lines.
+
+
+      function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function initShuffledTextLines() {
+        shuffledTextLines = [...textLines]; // Create a copy
+        shuffleArray(shuffledTextLines);
+        currentLineIndex = 0; // Reset to 0 after shuffling.
+      }
+
 
       function updateExampleText() {
-        if (currentLineIndex < textLines.length) {
-          exampleTextElement.textContent = textLines[currentLineIndex];
-          nextTextElement.textContent = (currentLineIndex + 1 < textLines.length)
-            ? textLines[currentLineIndex + 1]
+        if (currentLineIndex < shuffledTextLines.length) {
+          exampleTextElement.textContent = shuffledTextLines[currentLineIndex];
+          nextTextElement.textContent = (currentLineIndex + 1 < shuffledTextLines.length)
+            ? shuffledTextLines[currentLineIndex + 1]
             : "";
         } else {
           exampleTextElement.textContent = "All done!";
           nextTextElement.textContent = "";
         }
       }
+
 
       function updateStatus() {
         currentModeElement.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
@@ -328,11 +345,12 @@
       function resetGame() {
         gameStarted = false;
         startTime = null;
-        currentLineIndex = 0;
+        //currentLineIndex = 0; // Don't reset here;  reset in initShuffledTextLines.
         currentCharIndex = 0;
         totalTyped = 0;
         errorCount = 0;
         typedTextElement.innerHTML = "";
+        initShuffledTextLines(); // Shuffle and reset the index.
         updateExampleText();
         updateStatus();
         if (clockInterval) {
@@ -343,13 +361,17 @@
 
       function startGame() {
         if (!gameStarted) {
-          resetGame();
+           // Don't reset the game fully, only start the timer and intervals.
+          if (startTime === null) { // First start
+              updateExampleText();
+          }
           gameStarted = true;
           startTime = Date.now();
           clockInterval = setInterval(updateClock, 1000);
           updateStatus();
         }
       }
+
 
       function switchMode(newMode, resetGameFlag = true) {
         mode = newMode;
@@ -372,7 +394,7 @@
           e.preventDefault();
         }
         if (e.key === "Escape") {
-          switchMode('shortcut');
+          switchMode('shortcut', false);
           return;
         }
 
@@ -380,7 +402,7 @@
 
         if (mode === 'shortcut') {
           if (e.key.toLowerCase() === "s") {
-            switchMode('raw');
+            switchMode('raw', false);
             return;
           }
           if (e.key.toLowerCase() === "r") {
@@ -404,9 +426,9 @@
       }
 
       function handleTyping(char) {
-        if (!gameStarted || currentLineIndex >= textLines.length) return;
+        if (!gameStarted || currentLineIndex >= shuffledTextLines.length) return;
 
-        const expectedChar = textLines[currentLineIndex][currentCharIndex];
+        const expectedChar = shuffledTextLines[currentLineIndex][currentCharIndex];
         if (char === expectedChar) {
           const span = document.createElement('span');
           span.textContent = char;
@@ -414,12 +436,12 @@
           typedTextElement.appendChild(span);
           currentCharIndex++;
           totalTyped++;
-          if (currentCharIndex === textLines[currentLineIndex].length) {
+          if (currentCharIndex === shuffledTextLines[currentLineIndex].length) {
             typedTextElement.innerHTML = "";
             currentLineIndex++;
             currentCharIndex = 0;
             updateExampleText();
-            if (currentLineIndex >= textLines.length) {
+            if (currentLineIndex >= shuffledTextLines.length) {
               gameStarted = false;
               gameStatusElement.textContent = "Completed!";
               if (clockInterval) {
@@ -447,6 +469,7 @@
         });
       });
 
+      initShuffledTextLines(); // Initialize shuffled lines on page load.
       updateExampleText();
       updateStatus();
     })();
