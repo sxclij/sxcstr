@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,12 @@
   <meta name="description" content="Typing Lesson Game" />
   <link rel="stylesheet" href="/style.css">
   <style>
-    /* Basic styling for the game */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
     }
+
     #typing-game {
       margin: 20px auto;
       max-width: 800px;
@@ -21,22 +22,26 @@
       border-radius: 8px;
       background-color: #f9f9f9;
     }
+
     #controls label {
       margin-right: 20px;
       font-size: 1.1em;
     }
+
     #instructions {
       margin: 10px 0;
       font-style: italic;
     }
-    /* Game container layout */
+
     #game-container h2 {
       margin: 10px 0 5px;
       font-size: 1.3em;
     }
-    #game-container > div {
+
+    #game-container>div {
       margin-bottom: 15px;
     }
+
     #example-text,
     #typed-text,
     #next-text {
@@ -48,40 +53,44 @@
       white-space: nowrap;
       overflow-x: auto;
     }
-    /* Fix typed text container size when empty */
+
     #typed-text {
       min-height: 2.5em;
     }
-    /* Status styling */
+
     #status p {
       margin: 5px 0;
     }
-    /* Shortcut Information styling as a list */
+
     #shortcut-info ul {
       list-style-type: disc;
       padding-left: 20px;
     }
+
     #shortcut-info li {
       margin: 5px 0;
       font-size: 0.95em;
     }
-    /* Colored text */
+
     #typed-text span.correct {
       color: green;
     }
+
     #typed-text span.incorrect {
       color: red;
     }
-    /* Dark mode styling using prefers-color-scheme */
+
     @media (prefers-color-scheme: dark) {
       body {
         background-color: #121212;
         color: #e0e0e0;
       }
+
       #typing-game {
         border-color: #444;
         background-color: #1e1e1e;
       }
+
       #example-text,
       #typed-text,
       #next-text {
@@ -91,6 +100,7 @@
     }
   </style>
 </head>
+
 <body>
   <header>
     <nav class="navbar">
@@ -101,7 +111,6 @@
   <main>
 
     <section id="typing-game">
-      <!-- Mode selection controls -->
       <div id="controls">
         <label>
           <input type="radio" name="mode" value="raw" checked>
@@ -112,18 +121,16 @@
           Shortcut Mode
         </label>
       </div>
-      <!-- Instructions -->
       <div id="instructions">
         <p id="mode-instructions">
           In Raw Mode, type anywhere to start. Press Escape to switch to Shortcut Mode.
         </p>
       </div>
-      <!-- Game container with ordered sections -->
       <div id="game-container">
         <div id="example-text"></div>
-        <div id="typed-text"></div>
         <div id="next-text"></div>
-        
+        <div id="typed-text"></div>
+
         <h2>Status</h2>
         <div id="status">
           <p>Mode: <span id="current-mode">Raw</span></p>
@@ -134,7 +141,7 @@
           <p>Total Typed: <span id="total-typed">0</span></p>
           <p>Time: <span id="elapsed-time">0</span>s</p>
         </div>
-        
+
         <h2>Shortcut Information</h2>
         <div id="shortcut-info">
           <ul>
@@ -151,9 +158,7 @@
   </footer>
 
   <script>
-    // Improved Typing Lesson Game Script
-    (function() {
-      // Get elements for mode and instructions
+    (function () {
       const currentModeElement = document.getElementById('current-mode');
       const gameStatusElement = document.getElementById('game-status');
       const errorCountElement = document.getElementById('error-count');
@@ -163,34 +168,117 @@
       const elapsedTimeElement = document.getElementById('elapsed-time');
       const instructionsElement = document.getElementById('mode-instructions');
       const modeRadios = document.getElementsByName('mode');
-      
-      // Get elements for the game container sections
+
       const exampleTextElement = document.getElementById('example-text');
       const typedTextElement = document.getElementById('typed-text');
       const nextTextElement = document.getElementById('next-text');
-      
-      // Game variables
-      let mode = 'raw';  // default mode is raw
+
+      let mode = 'raw';
       let gameStarted = false;
       let startTime = null;
       let clockInterval = null;
-      
-      // Array of text lines for typing practice (each ~8 words)
+
       const textLines = [
         "Pack my box with five dozen liquor jugs.",
         "The five boxing wizards jump quickly every day.",
         "Sphinx of black quartz, judge my vow now.",
         "Crazy Fredrick bought many very exquisite opal jewels.",
         "Just quickly pack five boxes with rich jam.",
-        "My job requires extremely swift and steady typing."
+        "My job requires extremely swift and steady typing.",
+        "The quick brown fox jumps over the lazy fox.",
+        "How vexingly quick daft zebras jump!",
+        "Sixty zippers were quickly picked from the woven jute bag.",
+        "A quick movement of the enemy will jeopardize six gunboats.",
+        "The job requires extra pluck and zeal from every young wage earner.",
+        "Jived fox nymph grabs quick waltz.",
+        "Brown jars prevented the mixture from freezing too quickly.",
+        "Five quacking zephyrs jolt my wax bed.",
+        "My girl wove six dozen plaid jackets before she quit.",
+        "Quick zephyrs blow, vexing daft Jim.",
+        "Pack my box with five dozen liquor jugs again, please.",
+        "The five boxing wizards jump quickly; practice makes perfect.",
+        "Sphinx of black quartz, judge my vow: I will type faster!",
+        "Crazy Fredrick bought many, very exquisite opal jewels (and emeralds!).",
+        "Just quickly pack five boxes with rich jam and honey.",
+        "My job requires extremely swift, and steady, typing skills.",
+        "Jackdaws love my big sphinx of quartz.",
+        "Waltz, bad nymph, for quick jigs vex!",
+        "Five or six big jet planes zoomed quickly by the tower.",
+        "Heavy boxes perform quick waltzes and jigs.",
+        "Pack my red box with five dozen quality jugs.",
+        "The jay, pig, fox, zebra, and my wolves quack!",
+        "Sympathizing would fix Quaker objectives.",
+        "A large fawn jumped quickly over white zinc fences.",
+        "We promptly judged antique ivory buckles for the next prize.",
+        "My grandfather picks up quartz and valuable onyx jewels.",
+        "Six big devils from Japan quickly forgot how to waltz.",
+        "Crazy Fredericka bought many very exquisite opal jewels.",
+        "Quickly pack five boxes with rich, delicious jam.",
+        "Typing swiftly and steadily is a valuable skill to learn.",
+        "The quick, brown fox jumps gracefully over the lazy dog.",
+        "How vexingly quick, those daft zebras jump today!",
+        "Sixty zippers were quickly, and carefully, picked.",
+        "The enemy's quick movement jeopardizes our six gunboats.",
+        "Extra pluck, zeal, and focus are needed for this typing job.",
+        "The jived fox nymph quickly grabs a waltz partner.",
+        "Frozen fruit prevented the jam mixture from being too runny.",
+        "Five quacking zephyrs gently jolt my wax bed frame.",
+        "My girl skillfully wove six dozen plaid jackets.",
+        "Quick zephyrs blow, vexing Jim and causing drafts.",
+        "Repeat: Pack my box with five dozen liquor jugs.",
+        "Practice typing sentences with various punctuation marks.",
+        "The goal is accuracy and speed; combine both!",
+        "Remember to use correct finger placement. Asdf jkl; .",
+        "Focus on the screen, not your keyboard, while typing.",
+        "Keep your wrists straight and your elbows relaxed.",
+        "Small breaks are helpful; stretch your fingers regularly.",
+        "Don't get discouraged by mistakes; keep practicing!",
+        "Even experienced typists make errors occasionally.",
+        "The key is to learn from those mistakes and improve.",
+        "Aim for consistent rhythm and flow as you type.",
+        "Good typing habits will benefit you in many ways.",
+        "Try typing this sentence with your eyes closed!",
+        "How quickly can you type the alphabet backwards?",
+        "This sentence has thirty-three letters in it.",
+        "Now try typing this one, which has thirty-one.",
+        "Can you type a full paragraph without looking?",
+        "This exercise helps improve muscle memory.",
+        "Muscle memory is crucial for fast typing.",
+        "The more you practice, the better you'll become.",
+        "Typing speed increases with consistent effort.",
+        "Don't be afraid to challenge yourself.",
+        "Set realistic goals and track your progress.",
+        "Celebrate your improvements, big or small!",
+        "A good typing speed can save you time.",
+        "Time is a valuable resource; use it wisely.",
+        "Good posture minimizes strain and fatigue.",
+        "Remember to blink often to avoid eye strain.",
+        "Adjust your monitor to a comfortable height.",
+        "Ensure your chair provides adequate support.",
+        "Take short breaks to rest your hands and eyes.",
+        "Stretching exercises can prevent stiffness.",
+        "Listen to your body and don't push yourself too hard.",
+        "Consistency is more important than intensity.",
+        "Practice regularly, even for short periods.",
+        "Short, frequent sessions are more effective.",
+        "Than long, infrequent, tiring practice sessions.",
+        "Find a typing tutor program if you need help.",
+        "Online resources offer many typing lessons.",
+        "Use these resources to improve your skills.",
+        "Typing is a fundamental skill in today's world.",
+        "Mastering this skill will open up opportunities.",
+        "Continue practicing, and you will succeed!",
+        "The end is near, well done for trying so hard!",
+        "Keep practicing and you will be typing well soon.",
+        "Congratulations on completing this exercise!",
+        "One last line to type, and you are finally done."
       ];
-      
+
       let currentLineIndex = 0;
       let currentCharIndex = 0;
       let totalTyped = 0;
       let errorCount = 0;
-      
-      // Update the Example and Next text areas.
+
       function updateExampleText() {
         if (currentLineIndex < textLines.length) {
           exampleTextElement.textContent = textLines[currentLineIndex];
@@ -202,13 +290,15 @@
           nextTextElement.textContent = "";
         }
       }
-      
-      // Update the status display.
+
       function updateStatus() {
         currentModeElement.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-        // In Shortcut Mode, freeze dynamic status values.
         if (mode === 'shortcut') {
           gameStatusElement.textContent = gameStarted ? "In Progress" : "Waiting to start";
+          if (gameStarted && startTime) {
+            const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+            elapsedTimeElement.textContent = elapsedSeconds;
+          }
           return;
         }
         gameStatusElement.textContent = gameStarted ? "In Progress" : "Waiting to start";
@@ -228,17 +318,13 @@
           elapsedTimeElement.textContent = elapsedSeconds;
         }
       }
-      
-      // Update the elapsed time every second.
+
       function updateClock() {
-        // Stop clock updates in Shortcut Mode.
-        if (mode === 'shortcut') return;
         if (gameStarted && startTime) {
           updateStatus();
         }
       }
-      
-      // Reset game state.
+
       function resetGame() {
         gameStarted = false;
         startTime = null;
@@ -254,59 +340,44 @@
           clockInterval = null;
         }
       }
-      
-      // Start the game.
+
       function startGame() {
         if (!gameStarted) {
           resetGame();
           gameStarted = true;
           startTime = Date.now();
-          // Only start clock updates in Raw Mode.
-          if (mode === 'raw') {
-            clockInterval = setInterval(updateClock, 1000);
-          }
+          clockInterval = setInterval(updateClock, 1000);
           updateStatus();
         }
       }
-      
-      // Switch between Raw and Shortcut Modes.
-      // resetGameFlag: whether to reset game state (default true).
+
       function switchMode(newMode, resetGameFlag = true) {
         mode = newMode;
-        Array.from(modeRadios).forEach(function(radio) {
+        Array.from(modeRadios).forEach(function (radio) {
           radio.checked = (radio.value === newMode);
         });
         if (mode === 'raw') {
           instructionsElement.textContent = 'In Raw Mode, type anywhere to start. Press Escape to switch to Shortcut Mode.';
-          // Restart clock updates if the game is in progress.
-          if (gameStarted && !clockInterval) {
-            clockInterval = setInterval(updateClock, 1000);
-          }
         } else if (mode === 'shortcut') {
           instructionsElement.textContent = 'In Shortcut Mode, press Enter to start, S to switch to Raw Mode, and R to reset the game.';
-          // Stop status updates and clock.
-          if (clockInterval) {
-            clearInterval(clockInterval);
-            clockInterval = null;
-          }
         }
         if (resetGameFlag) {
           resetGame();
         }
         updateStatus();
       }
-      
-      // Process keystrokes.
+
       function keyHandler(e) {
-        // Prevent space from scrolling.
         if (e.key === " ") {
           e.preventDefault();
         }
-        
-        // Ignore modifier keys.
+        if (e.key === "Escape") {
+          switchMode('shortcut');
+          return;
+        }
+
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        
-        // Handle keys in Shortcut Mode.
+
         if (mode === 'shortcut') {
           if (e.key.toLowerCase() === "s") {
             switchMode('raw');
@@ -320,41 +391,34 @@
             startGame();
             return;
           }
-          // In Shortcut Mode, ignore all other keys (do not input text).
           return;
         }
-        
-        // In Raw Mode, auto-start on the first key press.
+
         if (mode === 'raw' && !gameStarted) {
           startGame();
         }
-        
-        // Process only single-character keys in Raw Mode.
+
         if (gameStarted && e.key.length === 1) {
           handleTyping(e.key);
         }
       }
-      
-      // Process typing input.
+
       function handleTyping(char) {
         if (!gameStarted || currentLineIndex >= textLines.length) return;
-        
+
         const expectedChar = textLines[currentLineIndex][currentCharIndex];
         if (char === expectedChar) {
-          // Correct input: append letter and move on.
           const span = document.createElement('span');
           span.textContent = char;
           span.classList.add('correct');
           typedTextElement.appendChild(span);
           currentCharIndex++;
           totalTyped++;
-          // If the entire line is typed, clear the typed text and move to the next line.
           if (currentCharIndex === textLines[currentLineIndex].length) {
             typedTextElement.innerHTML = "";
             currentLineIndex++;
             currentCharIndex = 0;
             updateExampleText();
-            // If no more lines, finish the game.
             if (currentLineIndex >= textLines.length) {
               gameStarted = false;
               gameStatusElement.textContent = "Completed!";
@@ -365,24 +429,28 @@
             }
           }
         } else {
-          // Incorrect key: increment error count.
+          const span = document.createElement('span');
+          span.textContent = char;
+          span.classList.add('incorrect');
+          typedTextElement.appendChild(span);
+
           errorCount++;
+          totalTyped++;
         }
         updateStatus();
       }
-      
-      // Attach event listeners.
+
       document.addEventListener('keydown', keyHandler);
-      Array.from(modeRadios).forEach(function(radio) {
-        radio.addEventListener('change', function(e) {
+      Array.from(modeRadios).forEach(function (radio) {
+        radio.addEventListener('change', function (e) {
           switchMode(e.target.value);
         });
       });
-      
-      // Initialize displays.
+
       updateExampleText();
       updateStatus();
     })();
   </script>
 </body>
+
 </html>
