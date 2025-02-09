@@ -278,7 +278,7 @@
       let currentCharIndex = 0;
       let totalTyped = 0;
       let errorCount = 0;
-      let shuffledTextLines = []; // Array to hold shuffled lines.
+      let shuffledTextLines = [];
 
 
       function shuffleArray(array) {
@@ -289,9 +289,9 @@
       }
 
       function initShuffledTextLines() {
-        shuffledTextLines = [...textLines]; // Create a copy
+        shuffledTextLines = [...textLines];
         shuffleArray(shuffledTextLines);
-        currentLineIndex = 0; // Reset to 0 after shuffling.
+        currentLineIndex = 0;
       }
 
 
@@ -345,12 +345,12 @@
       function resetGame() {
         gameStarted = false;
         startTime = null;
-        //currentLineIndex = 0; // Don't reset here;  reset in initShuffledTextLines.
+        //currentLineIndex = 0;
         currentCharIndex = 0;
         totalTyped = 0;
         errorCount = 0;
         typedTextElement.innerHTML = "";
-        initShuffledTextLines(); // Shuffle and reset the index.
+        initShuffledTextLines();
         updateExampleText();
         updateStatus();
         if (clockInterval) {
@@ -361,9 +361,9 @@
 
       function startGame() {
         if (!gameStarted) {
-           // Don't reset the game fully, only start the timer and intervals.
-          if (startTime === null) { // First start
-              updateExampleText();
+
+          if (startTime === null) {
+            updateExampleText();
           }
           gameStarted = true;
           startTime = Date.now();
@@ -469,7 +469,7 @@
         });
       });
 
-      initShuffledTextLines(); // Initialize shuffled lines on page load.
+      initShuffledTextLines();
       updateExampleText();
       updateStatus();
     })();
