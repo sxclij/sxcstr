@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>My C VM Terminal</title>
+  <style>
+    #terminal {
+      background-color: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      border: 2px solid #333;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+
+    #codeInput {
+      width: 100%;
+      height: 100px;
+      font-family: monospace;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+
+    #runButton {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="terminal"></div>
+  <textarea id="codeInput" placeholder="Enter your code here..."></textarea>
+  <button id="runButton">Run</button>
+
+  <script>
+    const terminal = document.getElementById('terminal');
+    const codeInput = document.getElementById('codeInput');
+    const runButton = document.getElementById('runButton');
+
+    function printToTerminal(text) {
+      terminal.textContent += text + "\n";
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function runVM(code) {
+    }
+
+    runButton.addEventListener('click', () => {
+      terminal.textContent = "";
+      const code = codeInput.value;
+      runVM(code);
+    });
+  </script>
+</body>
+
+</html>
