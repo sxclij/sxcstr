@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,21 +14,26 @@
       background: #111;
       color: #eee;
     }
-    #left-panel, #terminal-container {
+
+    #left-panel,
+    #terminal-container {
       padding: 10px;
       box-sizing: border-box;
     }
+
     #left-panel {
       width: 40%;
       display: flex;
       flex-direction: column;
       border-right: 1px solid #444;
     }
+
     #terminal-container {
       width: 60%;
       display: flex;
       flex-direction: column;
     }
+
     #terminal {
       background-color: #000;
       color: #0f0;
@@ -38,6 +44,7 @@
       border: 2px solid #333;
       white-space: pre-wrap;
     }
+
     #codeInput {
       width: 100%;
       flex-grow: 1;
@@ -47,11 +54,13 @@
       resize: none;
       margin-bottom: 10px;
     }
+
     #button-container {
       display: flex;
       gap: 10px;
       margin-bottom: 10px;
     }
+
     .button {
       padding: 10px 20px;
       font-size: 1em;
@@ -59,6 +68,7 @@
     }
   </style>
 </head>
+
 <body>
   <div id="left-panel">
     <div id="button-container">
@@ -120,10 +130,10 @@ fn vec_pop(v) (
     return (result)
 )
 
-fn for1000000() (
+fn for100000000() (
     &i = 0
     loop(
-        if(i == 1000000) (
+        if(i == 100000000) (
             break
         )
         &i = i + 1
@@ -132,7 +142,7 @@ fn for1000000() (
 
 fn input_ch(ch) (
     if(ch == 49) (
-        for1000000()
+        for100000000()
     )
     &result = _write(ch)
 )
@@ -163,19 +173,19 @@ fn main() (
     (() => {
       "use strict";
       const OP_NULL = 0, OP_NOP = 1, OP_PUSH_CONST = 2, OP_PUSH_VARADDR = 3,
-            OP_TEST01 = 4, OP_TEST02 = 5, OP_TEST03 = 6, OP_GLOBAL_GET = 7,
-            OP_GLOBAL_SET = 8, OP_CALL = 9, OP_RETURN = 10, OP_JMP = 11,
-            OP_JZE = 12, OP_OR = 13, OP_AND = 14, OP_EQ = 15, OP_NE = 16,
-            OP_LT = 17, OP_GT = 18, OP_ADD = 19, OP_SUB = 20, OP_MUL = 21,
-            OP_DIV = 22, OP_MOD = 23, OP_SVC = 24, OP_LABEL = 25, OP_LABEL_FNEND = 26;
+        OP_TEST01 = 4, OP_TEST02 = 5, OP_TEST03 = 6, OP_GLOBAL_GET = 7,
+        OP_GLOBAL_SET = 8, OP_CALL = 9, OP_RETURN = 10, OP_JMP = 11,
+        OP_JZE = 12, OP_OR = 13, OP_AND = 14, OP_EQ = 15, OP_NE = 16,
+        OP_LT = 17, OP_GT = 18, OP_ADD = 19, OP_SUB = 20, OP_MUL = 21,
+        OP_DIV = 22, OP_MOD = 23, OP_SVC = 24, OP_LABEL = 25, OP_LABEL_FNEND = 26;
       const GLOBAL_NULL = 0, GLOBAL_IP = 1, GLOBAL_SP = 2, GLOBAL_BP = 3, GLOBAL_IO = 4;
       const MEM_SZ = 1 << 20, GLOB_SZ = 1 << 8, STK_SZ = 1 << 10;
-      
-      
+
+
       const isNum = str => /^[0-9-]/.test(str);
       const tokenToInt = token => parseInt(token, 10);
-      
-      
+
+
       function tokenize(src) {
         const tokens = [];
         let token = "";
@@ -199,7 +209,7 @@ fn main() (
         if (token) tokens.push(token);
         return tokens;
       }
-      
+
       class Node {
         constructor(op, token = null, val = 0) {
           this.op = op;
@@ -214,7 +224,7 @@ fn main() (
           this.inst_index = inst_index;
         }
       }
-      
+
       class Parser {
         constructor(tokens) {
           this.tokens = tokens;
@@ -229,7 +239,7 @@ fn main() (
           else throw new Error(`Expected token ${token} but got ${this.current()}`);
         }
         pushNode(op, token = null, val = 0) { this.nodes.push(new Node(op, token, val)); }
-        
+
         parsePrimary(lab_break, lab_cont) {
           if (this.current() === "(") {
             this.consume("(");
@@ -247,7 +257,7 @@ fn main() (
             this.pos++;
           }
         }
-        
+
         parsePostfix(lab_break, lab_cont) {
           const startToken = this.current();
           if (this.pos + 1 < this.tokens.length && this.tokens[this.pos + 1] === "(") {
@@ -260,7 +270,7 @@ fn main() (
             this.parsePrimary(lab_break, lab_cont);
           }
         }
-        
+
         parseUnary(lab_break, lab_cont) {
           if (this.current() === "&") {
             this.consume("&");
@@ -274,7 +284,7 @@ fn main() (
             this.parsePostfix(lab_break, lab_cont);
           }
         }
-        
+
         parseMul(lab_break, lab_cont) {
           this.parseUnary(lab_break, lab_cont);
           while (["*", "/", "%"].includes(this.current())) {
@@ -284,7 +294,7 @@ fn main() (
             this.pushNode(op === "*" ? OP_MUL : op === "/" ? OP_DIV : OP_MOD);
           }
         }
-        
+
         parseAdd(lab_break, lab_cont) {
           this.parseMul(lab_break, lab_cont);
           while (["+", "-"].includes(this.current())) {
@@ -294,7 +304,7 @@ fn main() (
             this.pushNode(op === "+" ? OP_ADD : OP_SUB);
           }
         }
-        
+
         parseRel(lab_break, lab_cont) {
           this.parseAdd(lab_break, lab_cont);
           while (["<", ">"].includes(this.current())) {
@@ -304,7 +314,7 @@ fn main() (
             this.pushNode(op === "<" ? OP_LT : OP_GT);
           }
         }
-        
+
         parseEq(lab_break, lab_cont) {
           this.parseRel(lab_break, lab_cont);
           while (["==", "!="].includes(this.current())) {
@@ -314,7 +324,7 @@ fn main() (
             this.pushNode(op === "==" ? OP_EQ : OP_NE);
           }
         }
-        
+
         parseAnd(lab_break, lab_cont) {
           this.parseEq(lab_break, lab_cont);
           while (this.current() === "&&") {
@@ -323,7 +333,7 @@ fn main() (
             this.pushNode(OP_AND);
           }
         }
-        
+
         parseOr(lab_break, lab_cont) {
           this.parseAnd(lab_break, lab_cont);
           while (this.current() === "||") {
@@ -332,7 +342,7 @@ fn main() (
             this.pushNode(OP_OR);
           }
         }
-        
+
         parseAssign(lab_break, lab_cont) {
           this.parseOr(lab_break, lab_cont);
           while (this.current() === "=") {
@@ -341,7 +351,7 @@ fn main() (
             this.pushNode(OP_GLOBAL_SET);
           }
         }
-        
+
         parseExpr(lab_break, lab_cont) {
           if (this.current() === "if") {
             const lab_if = this.labSize++;
@@ -381,7 +391,7 @@ fn main() (
             this.parseAssign(lab_break, lab_cont);
           }
         }
-        
+
         parseFn(lab_break, lab_cont) {
           if (this.current() === "fn") {
             const lab_fn = this.labSize++;
@@ -414,15 +424,15 @@ fn main() (
             this.parseExpr(lab_break, lab_cont);
           }
         }
-        
+
         parseTokens() {
           while (this.pos < this.tokens.length) {
             this.parseFn(-1, -1);
           }
         }
       }
-      
-      
+
+
       function analyzePush(nodes) {
         let off = 0, locals = {};
         for (let n of nodes) {
@@ -441,56 +451,52 @@ fn main() (
           }
         }
       }
-      
-      
+
+
       function findLabel(labels, labSize, token) {
         for (let i = 0; i < labSize; i++) {
           if (labels[i] && labels[i].token === token) return i;
         }
         return -1;
       }
-      
-      
+
+
       function toInstructions(nodes, labels, labSize) {
-        const mem = new Array(MEM_SZ).fill(null).map(() => ({ op: OP_NULL, val: 0 }));
+        const mem = new Int32Array(MEM_SZ);
         let iptr = GLOB_SZ;
         for (let n of nodes) {
           if (n.op === OP_LABEL) {
             labels[n.val].inst_index = iptr;
-          } else if (n.op === OP_PUSH_CONST || n.op === OP_PUSH_VARADDR) {
-            mem[iptr++] = { op: n.op, val: 0 };
-            mem[iptr++] = { op: 0, val: n.val };
-          } else if (n.op === OP_JMP || n.op === OP_JZE) {
-            mem[iptr++] = { op: n.op, val: 0 };
-            mem[iptr++] = { op: 0, val: n.val };
+          } else if (n.op === OP_PUSH_CONST || n.op === OP_PUSH_VARADDR || n.op === OP_JMP || n.op === OP_JZE) {
+            mem[iptr++] = n.op;
+            mem[iptr++] = n.val;
           } else if (n.op === OP_CALL) {
-            mem[iptr++] = { op: n.op, val: 0 };
-            let labIndex = findLabel(labels, labSize, n.token);
-            mem[iptr++] = { op: 0, val: labIndex };
+            mem[iptr++] = n.op;
+            mem[iptr++] = findLabel(labels, labSize, n.token)
           } else if (n.op === OP_NOP) {
-            
+            continue;
           } else {
-            mem[iptr++] = { op: n.op, val: 0 };
+            mem[iptr++] = n.op;
           }
         }
-        mem[GLOBAL_IP] = { op: 0, val: GLOB_SZ };
-        mem[GLOBAL_BP] = { op: 0, val: iptr };
-        mem[GLOBAL_SP] = { op: 0, val: iptr + STK_SZ };
+        mem[GLOBAL_IP] = GLOB_SZ;
+        mem[GLOBAL_BP] = iptr;
+        mem[GLOBAL_SP] = iptr + STK_SZ;
         return mem;
       }
-      
+
       function linkInstructions(mem, labels, labSize) {
         for (let i = GLOB_SZ; i < mem.length && mem[i].op !== OP_NULL; i++) {
-          if ([OP_JMP, OP_JZE, OP_CALL].includes(mem[i].op)) {
+          if (mem[i] === OP_JMP || mem[i] === OP_JZE || mem[i] === OP_CALL) {
             i++;
-            mem[i].val = labels[mem[i].val].inst_index;
-          } else if ([OP_PUSH_CONST, OP_PUSH_VARADDR].includes(mem[i].op)) {
+            mem[i] = labels[mem[i]].inst_index;
+          } else if (mem[i] === OP_PUSH_CONST || mem[i] === OP_PUSH_VARADDR) {
             i++;
           }
         }
       }
-      
-      
+
+
       function compile(src) {
         const tokens = tokenize(src);
         const parser = new Parser(tokens);
@@ -500,131 +506,193 @@ fn main() (
         linkInstructions(mem, parser.labels, parser.labSize);
         return mem;
       }
-      
+
       async function runScript(mem) {
-        const ipIndex = GLOBAL_IP, spIndex = GLOBAL_SP, bpIndex = GLOBAL_BP, ioIndex = GLOBAL_IO;
-        while (mem[mem[ipIndex].val].op !== OP_NULL) {
-          let ip = mem[ipIndex].val;
-          const inst = mem[ip];
-          switch (inst.op) {
-            case OP_NULL: break;
-            case OP_NOP: break;
+        while (mem[mem[GLOBAL_IP]] !== OP_NULL) {
+          let ip = mem[GLOBAL_IP];
+          let op = mem[ip];
+          switch (op) {
+            case OP_NOP:
+              break;
             case OP_PUSH_CONST:
-              mem[ipIndex].val++;
-              mem[mem[spIndex].val] = { op: 0, val: mem[mem[ipIndex].val].val };
-              mem[spIndex].val++;
-              break;
-            case OP_PUSH_VARADDR:
-              mem[ipIndex].val++;
-              mem[mem[spIndex].val] = { op: 0, val: mem[bpIndex].val + mem[mem[ipIndex].val].val };
-              mem[spIndex].val++;
-              break;
-            case OP_GLOBAL_GET:
-              mem[mem[spIndex].val - 1].val = mem[mem[mem[spIndex].val - 1].val].val;
-              break;
-            case OP_GLOBAL_SET:
-              mem[mem[mem[spIndex].val - 2].val].val = mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val -= 2;
-              break;
-            case OP_CALL:
-              mem[mem[spIndex].val] = { op: 0, val: mem[ipIndex].val + 1 };
-              mem[mem[spIndex].val + 1] = { op: 0, val: mem[spIndex].val };
-              mem[mem[spIndex].val + 2] = { op: 0, val: mem[bpIndex].val };
-              mem[ipIndex].val = mem[mem[ipIndex].val + 1].val - 1;
-              mem[bpIndex].val = mem[spIndex].val + 3;
-              mem[spIndex].val += STK_SZ;
-              break;
-            case OP_RETURN: {
-              const retVal = mem[mem[spIndex].val - 1].val;
-              mem[ipIndex].val = mem[mem[bpIndex].val - 3].val;
-              mem[spIndex].val = mem[mem[bpIndex].val - 2].val;
-              mem[bpIndex].val = mem[mem[bpIndex].val - 1].val;
-              mem[mem[spIndex].val] = { op: 0, val: retVal };
-              mem[spIndex].val++;
-              break;
-            }
-            case OP_JMP:
-              mem[ipIndex].val = mem[mem[ipIndex].val + 1].val - 1;
-              break;
-            case OP_JZE:
-              if (mem[mem[spIndex].val - 1].val === 0)
-                mem[ipIndex].val = mem[mem[ipIndex].val + 1].val - 1;
-              else
-                mem[ipIndex].val++;
-              mem[spIndex].val--;
-              break;
-            case OP_OR:
-              mem[mem[spIndex].val - 2].val |= mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val--;
-              break;
-            case OP_AND:
-              mem[mem[spIndex].val - 2].val &= mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val--;
-              break;
-            case OP_EQ:
-              mem[mem[spIndex].val - 2].val = mem[mem[spIndex].val - 2].val === mem[mem[spIndex].val - 1].val ? 1 : 0;
-              mem[spIndex].val--;
-              break;
-            case OP_NE:
-              mem[mem[spIndex].val - 2].val = mem[mem[spIndex].val - 2].val !== mem[mem[spIndex].val - 1].val ? 1 : 0;
-              mem[spIndex].val--;
-              break;
-            case OP_LT:
-              mem[mem[spIndex].val - 2].val = mem[mem[spIndex].val - 2].val < mem[mem[spIndex].val - 1].val ? 1 : 0;
-              mem[spIndex].val--;
-              break;
-            case OP_GT:
-              mem[mem[spIndex].val - 2].val = mem[mem[spIndex].val - 2].val > mem[mem[spIndex].val - 1].val ? 1 : 0;
-              mem[spIndex].val--;
-              break;
-            case OP_ADD:
-              mem[mem[spIndex].val - 2].val += mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val--;
-              break;
-            case OP_SUB:
-              mem[mem[spIndex].val - 2].val -= mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val--;
-              break;
-            case OP_MUL:
-              mem[mem[spIndex].val - 2].val *= mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val--;
-              break;
-            case OP_DIV:
-              mem[mem[spIndex].val - 2].val = Math.floor(
-                mem[mem[spIndex].val - 2].val / mem[mem[spIndex].val - 1].val
-              );
-              mem[spIndex].val--;
-              break;
-            case OP_MOD:
-              mem[mem[spIndex].val - 2].val %= mem[mem[spIndex].val - 1].val;
-              mem[spIndex].val--;
-              break;
-            case OP_SVC: {
-              const svcArg = mem[mem[spIndex].val - 1].val;
-              if (svcArg === 0) {
-                mem[ioIndex].val = await getNextInputChar();
-              } else if (svcArg === 1) {
-                printToTerminal(String.fromCharCode(mem[ioIndex].val));
-              } else if (svcArg === 2) {
-                await new Promise(resolve => setTimeout(resolve, mem[ioIndex].val));
+              mem[GLOBAL_IP]++;  // Advance to operand
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp] = mem[mem[GLOBAL_IP]];
+                mem[GLOBAL_SP] = sp + 1;
               }
               break;
-            }
-            default: break;
+            case OP_PUSH_VARADDR:
+              mem[GLOBAL_IP]++;
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp] = mem[GLOBAL_BP] + mem[mem[GLOBAL_IP]];
+                mem[GLOBAL_SP] = sp + 1;
+              }
+              break;
+            case OP_GLOBAL_GET:
+              {
+                let sp = mem[GLOBAL_SP] - 1;
+                let addr = mem[sp];
+                mem[sp] = mem[addr];
+              }
+              break;
+            case OP_GLOBAL_SET:
+              {
+                let sp = mem[GLOBAL_SP];
+                let addr = mem[sp - 2];
+                mem[addr] = mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 2;
+              }
+              break;
+            case OP_CALL:
+              {
+                let sp = mem[GLOBAL_SP];
+                // Push return address (current IP + 1)
+                mem[sp] = mem[GLOBAL_IP] + 1;
+                // Push current SP
+                mem[sp + 1] = mem[GLOBAL_SP];
+                // Push current BP
+                mem[sp + 2] = mem[GLOBAL_BP];
+                // Set IP to target (operand cell holds target; subtract 1 because of post‐increment)
+                mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
+                // Set new BP to current SP + 3
+                mem[GLOBAL_BP] = sp + 3;
+                // Allocate new frame
+                mem[GLOBAL_SP] = sp + STK_SZ;
+              }
+              break;
+            case OP_RETURN:
+              {
+                let sp = mem[GLOBAL_SP];
+                let retVal = mem[sp - 1];
+                mem[GLOBAL_IP] = mem[mem[GLOBAL_BP] - 3];
+                mem[GLOBAL_SP] = mem[mem[GLOBAL_BP] - 2];
+                mem[GLOBAL_BP] = mem[mem[GLOBAL_BP] - 1];
+                sp = mem[GLOBAL_SP];
+                mem[sp] = retVal;
+                mem[GLOBAL_SP] = sp + 1;
+              }
+              break;
+            case OP_JMP:
+              mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
+              break;
+            case OP_JZE:
+              {
+                let sp = mem[GLOBAL_SP];
+                if (mem[sp - 1] === 0)
+                  mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
+                else
+                  mem[GLOBAL_IP] = mem[GLOBAL_IP] + 1;
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_OR:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] |= mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_AND:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] &= mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_EQ:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] = (mem[sp - 2] === mem[sp - 1]) ? 1 : 0;
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_NE:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] = (mem[sp - 2] !== mem[sp - 1]) ? 1 : 0;
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_LT:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] = (mem[sp - 2] < mem[sp - 1]) ? 1 : 0;
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_GT:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] = (mem[sp - 2] > mem[sp - 1]) ? 1 : 0;
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_ADD:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] += mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_SUB:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] -= mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_MUL:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] *= mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_DIV:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] = Math.floor(mem[sp - 2] / mem[sp - 1]);
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_MOD:
+              {
+                let sp = mem[GLOBAL_SP];
+                mem[sp - 2] %= mem[sp - 1];
+                mem[GLOBAL_SP] = sp - 1;
+              }
+              break;
+            case OP_SVC:
+              {
+                let sp = mem[GLOBAL_SP];
+                let svcArg = mem[sp - 1];
+                if (svcArg === 0) {
+                  mem[GLOBAL_IO] = await getNextInputChar();
+                } else if (svcArg === 1) {
+                  printToTerminal(String.fromCharCode(mem[GLOBAL_IO]));
+                } else if (svcArg === 2) {
+                  await new Promise(resolve => setTimeout(resolve, mem[GLOBAL_IO] * 1000));
+                }
+              }
+              break;
+            default:
+              break;
           }
-          mem[ipIndex].val++;
+          // Increment IP at the end of each loop iteration
+          mem[GLOBAL_IP]++;
         }
       }
-      
       const terminal = document.getElementById("terminal");
       const printToTerminal = text => terminal.textContent += text;
-      
+
       const inputQueue = [];
       document.addEventListener("keydown", ({ key }) => {
         if (key.length === 1) inputQueue.push(key.charCodeAt(0));
         else if (key === "Enter") inputQueue.push(13);
       });
-      
+
       async function getNextInputChar() {
         return new Promise(resolve => {
           const checkQueue = () => {
@@ -634,22 +702,23 @@ fn main() (
           checkQueue();
         });
       }
-      
+
       async function runVM(code) {
         const mem = compile(code);
         await runScript(mem);
       }
-      
+
       document.getElementById("runButton").addEventListener("click", async () => {
         terminal.textContent = "";
         const code = document.getElementById("codeInput").value;
         await runVM(code);
       });
-      
-      
+
+
       window.compile = compile;
       window.runScript = runScript;
     })();
   </script>
 </body>
+
 </html>
