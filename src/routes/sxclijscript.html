@@ -1,62 +1,762 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sxclijscript - SVC Version (Real-Time Input)</title>
+    <style>
+      /* Basic layout using flexbox */
+      body {
+        margin: 0;
+        display: flex;
+        height: 100vh;
+        font-family: sans-serif;
+      }
+      #left-panel,
+      #terminal-container {
+        padding: 10px;
+        box-sizing: border-box;
+      }
+      #left-panel {
+        width: 40%;
+        display: flex;
+        flex-direction: column;
+      }
+      #terminal-container {
+        width: 60%;
+        display: flex;
+        flex-direction: column;
+      }
+      /* Terminal styling */
+      #terminal {
+        background-color: #000;
+        color: #0f0;
+        font-family: monospace;
+        padding: 10px;
+        flex-grow: 1;
+        overflow-y: auto;
+        border: 2px solid #333;
+        white-space: pre-wrap;
+      }
+      /* Code editor styling */
+      #codeInput {
+        width: 100%;
+        flex-grow: 1;
+        font-family: monospace;
+        padding: 5px;
+        box-sizing: border-box;
+        resize: none;
+        margin-bottom: 10px;
+      }
+      /* Button container styling */
+      #button-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .button {
+        padding: 10px 20px;
+        font-size: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="left-panel">
+      <div id="button-container">
+        <button id="runButton" class="button">Run</button>
+      </div>
+      <textarea
+        id="codeInput"
+        placeholder="Enter your sxclijscript code here"
+      >
+main()
+eternal_sleep()
 
-<head>
-  <meta charset="UTF-8">
-  <title>My C VM Terminal</title>
-  <style>
-    #terminal {
-      background-color: #000;
-      color: #0f0;
-      font-family: monospace;
-      padding: 10px;
-      height: 300px;
-      overflow-y: auto;
-      border: 2px solid #333;
-      margin-bottom: 10px;
-      white-space: pre-wrap;
-    }
+fn read() (
+    loop (
+        svc(0)
+        if(*4 == 0) (
+            break
+        )
+        else (
+            4 = *4 + 1
+            svc(1)
+        )
+    )
+)
 
-    #codeInput {
-      width: 100%;
-      height: 100px;
-      font-family: monospace;
-      padding: 5px;
-      box-sizing: border-box;
-    }
+fn main() (
+    loop (
+        read()
+    )
+)
 
-    #runButton {
-      padding: 10px 20px;
-      font-size: 1em;
-      margin-top: 5px;
-    }
-  </style>
-</head>
+fn eternal_sleep() (
+    loop (
+    )
+)
+    </textarea>
+    </div>
+    <div id="terminal-container">
+      <div id="terminal"></div>
+    </div>
 
-<body>
-  <div id="terminal"></div>
-  <textarea id="codeInput" placeholder="Enter your code here..."></textarea>
-  <button id="runButton">Run</button>
+    <script>
+      /***********************************************************************
+       * JavaScript Virtual Machine (SVC Version with Real-Time Input)
+       *
+       * This VM is a port of the provided C code with modifications:
+       *  - The usleep opcode is replaced by SVC.
+       *  - SVC simulates system calls:
+       *       0 -> wait for a key press (real-time input),
+       *       1 -> output a character to the terminal,
+       *       2 -> reserved (sleep, no-op).
+       *
+       * The VM stages are:
+       *   1. Tokenize the source.
+       *   2. Parse tokens into nodes.
+       *   3. Generate bytecode instructions.
+       *   4. Link jump targets.
+       *   5. Execute instructions asynchronously.
+       ***********************************************************************/
 
-  <script>
-    const terminal = document.getElementById('terminal');
-    const codeInput = document.getElementById('codeInput');
-    const runButton = document.getElementById('runButton');
+      // --- Configuration & Global Variables ---
+      const STACK_SZ = 1024;        // simulated stack size
+      const MEM_SZ = 1 << 16;         // total VM memory size
+      const GLOB_SZ = 1 << 8;         // reserved area for VM registers
+      const STK_SZ = 1 << 10;         // extra stack space
+      const rawMode = true;           // enable raw mode for key input
 
-    function printToTerminal(text) {
-      terminal.textContent += text + "\n";
-      terminal.scrollTop = terminal.scrollHeight;
-    }
+      let inputQueue = [];
 
-    function runVM(code) {
-    }
+      // --- Operation Codes ---
+      const OP = Object.freeze({
+        NULL: 0,
+        NOP: 1,
+        PUSH_CONST: 2,
+        PUSH_VARADDR: 3,
+        TEST01: 4,
+        TEST02: 5,
+        TEST03: 6,
+        GLOBAL_GET: 7,
+        GLOBAL_SET: 8,
+        CALL: 9,
+        RETURN: 10,
+        JMP: 11,
+        JZE: 12,
+        OR: 13,
+        AND: 14,
+        EQ: 15,
+        NE: 16,
+        LT: 17,
+        GT: 18,
+        ADD: 19,
+        SUB: 20,
+        MUL: 21,
+        DIV: 22,
+        MOD: 23,
+        SVC: 24, // SVC replaces usleep
+        LABEL: 25,
+        LABEL_FNEND: 26,
+      });
 
-    runButton.addEventListener('click', () => {
-      terminal.textContent = "";
-      const code = codeInput.value;
-      runVM(code);
-    });
-  </script>
-</body>
+      // --- Global Registers (stored in mem[1]..mem[4]) ---
+      const GLOBAL = Object.freeze({
+        NULL: 0,
+        IP: 1,
+        SP: 2,
+        BP: 3,
+        IO: 4,
+      });
 
+      // --- Tokenizer Helper Functions ---
+      const tokenEqStr = (token, str) => token && token.text === str;
+      const isNum = (token) => token && /^-?\d+$/.test(token.text);
+      const tokenToInt = (token) => parseInt(token.text, 10);
+      const pushNode = (nodes, op, token, val) => nodes.push({ op, token, val });
+
+      // --- Tokenizer ---
+      const tokenize = (src) => {
+        const tokens = [];
+        let i = 0;
+        while (i < src.length) {
+          const ch = src[i];
+          if (" \n\t\r".includes(ch)) {
+            i++;
+            continue;
+          }
+          // Single-character tokens.
+          if ("(),.*&".includes(ch)) {
+            tokens.push({ text: ch });
+            i++;
+            continue;
+          }
+          // Multi-character operators (==, !=, etc.)
+          if (
+            (ch === "=" || ch === "!" || ch === "<" || ch === ">") &&
+            src[i + 1] === "="
+          ) {
+            tokens.push({ text: ch + "=" });
+            i += 2;
+            continue;
+          }
+          if (
+            (ch === "&" && src[i + 1] === "&") ||
+            (ch === "|" && src[i + 1] === "|")
+          ) {
+            tokens.push({ text: ch + src[i + 1] });
+            i += 2;
+            continue;
+          }
+          // Accumulate identifier/number.
+          let start = i;
+          while (i < src.length && !" \n\t\r(),.*&".includes(src[i])) {
+            i++;
+          }
+          tokens.push({ text: src.slice(start, i) });
+        }
+        return tokens;
+      };
+
+      // --- Parser Functions (Recursive Descent) ---
+      const parsePrimary = (state, tokens, nodes, labels, labBreak, labCont) => {
+        if (tokenEqStr(tokens[state.i], "(")) {
+          state.i++;
+          while (!tokenEqStr(tokens[state.i], ")")) {
+            parseExpr(state, tokens, nodes, labels, labBreak, labCont);
+            if (tokenEqStr(tokens[state.i], ",")) state.i++;
+          }
+          state.i++;
+        } else if (isNum(tokens[state.i])) {
+          pushNode(nodes, OP.PUSH_CONST, tokens[state.i], 0);
+          state.i++;
+        } else {
+          // Variable: push its address then get its value.
+          pushNode(nodes, OP.PUSH_VARADDR, tokens[state.i], 0);
+          pushNode(nodes, OP.GLOBAL_GET, null, 0);
+          state.i++;
+        }
+      };
+
+      const parsePostfix = (state, tokens, nodes, labels, labBreak, labCont) => {
+        const start = tokens[state.i];
+        if (tokens[state.i + 1] && tokenEqStr(tokens[state.i + 1], "(")) {
+          state.i++;
+          parsePrimary(state, tokens, nodes, labels, labBreak, labCont);
+          if (tokenEqStr(start, "return")) {
+            pushNode(nodes, OP.RETURN, null, 0);
+          } else if (tokenEqStr(start, "svc")) {
+            pushNode(nodes, OP.SVC, null, 0);
+          } else {
+            pushNode(nodes, OP.CALL, start, 0);
+          }
+        } else {
+          parsePrimary(state, tokens, nodes, labels, labBreak, labCont);
+        }
+      };
+
+      const parseUnary = (state, tokens, nodes, labels, labBreak, labCont) => {
+        if (tokenEqStr(tokens[state.i], "&")) {
+          state.i++;
+          pushNode(nodes, OP.PUSH_VARADDR, tokens[state.i], 0);
+          state.i++;
+        } else if (tokenEqStr(tokens[state.i], "*")) {
+          state.i++;
+          parsePostfix(state, tokens, nodes, labels, labBreak, labCont);
+          pushNode(nodes, OP.GLOBAL_GET, null, 0);
+        } else {
+          parsePostfix(state, tokens, nodes, labels, labBreak, labCont);
+        }
+      };
+
+      const parseMul = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseUnary(state, tokens, nodes, labels, labBreak, labCont);
+        while (true) {
+          if (tokenEqStr(tokens[state.i], "*")) {
+            state.i++;
+            parseUnary(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.MUL, null, 0);
+          } else if (tokenEqStr(tokens[state.i], "/")) {
+            state.i++;
+            parseUnary(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.DIV, null, 0);
+          } else if (tokenEqStr(tokens[state.i], "%")) {
+            state.i++;
+            parseUnary(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.MOD, null, 0);
+          } else {
+            break;
+          }
+        }
+      };
+
+      const parseAdd = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseMul(state, tokens, nodes, labels, labBreak, labCont);
+        while (true) {
+          if (tokenEqStr(tokens[state.i], "+")) {
+            state.i++;
+            parseMul(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.ADD, null, 0);
+          } else if (tokenEqStr(tokens[state.i], "-")) {
+            state.i++;
+            parseMul(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.SUB, null, 0);
+          } else {
+            break;
+          }
+        }
+      };
+
+      const parseRel = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseAdd(state, tokens, nodes, labels, labBreak, labCont);
+        while (true) {
+          if (tokenEqStr(tokens[state.i], "<")) {
+            state.i++;
+            parseAdd(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.LT, null, 0);
+          } else if (tokenEqStr(tokens[state.i], ">")) {
+            state.i++;
+            parseAdd(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.GT, null, 0);
+          } else {
+            break;
+          }
+        }
+      };
+
+      const parseEq = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseRel(state, tokens, nodes, labels, labBreak, labCont);
+        while (true) {
+          if (tokenEqStr(tokens[state.i], "==")) {
+            state.i++;
+            parseRel(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.EQ, null, 0);
+          } else if (tokenEqStr(tokens[state.i], "!=")) {
+            state.i++;
+            parseRel(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.NE, null, 0);
+          } else {
+            break;
+          }
+        }
+      };
+
+      const parseAnd = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseEq(state, tokens, nodes, labels, labBreak, labCont);
+        while (
+          tokenEqStr(tokens[state.i], "&") &&
+          tokens[state.i + 1] &&
+          tokenEqStr(tokens[state.i + 1], "&")
+        ) {
+          state.i += 2;
+          parseEq(state, tokens, nodes, labels, labBreak, labCont);
+          pushNode(nodes, OP.AND, null, 0);
+        }
+      };
+
+      const parseOr = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseAnd(state, tokens, nodes, labels, labBreak, labCont);
+        while (tokenEqStr(tokens[state.i], "||")) {
+          state.i++;
+          parseAnd(state, tokens, nodes, labels, labBreak, labCont);
+          pushNode(nodes, OP.OR, null, 0);
+        }
+      };
+
+      const parseAssign = (state, tokens, nodes, labels, labBreak, labCont) => {
+        parseOr(state, tokens, nodes, labels, labBreak, labCont);
+        while (tokenEqStr(tokens[state.i], "=")) {
+          state.i++;
+          parseOr(state, tokens, nodes, labels, labBreak, labCont);
+          pushNode(nodes, OP.GLOBAL_SET, null, 0);
+        }
+      };
+
+      const parseExpr = (state, tokens, nodes, labels, labBreak, labCont) => {
+        if (tokenEqStr(tokens[state.i], "if")) {
+          // Allocate labels for "if" and "else"
+          const lab_if = labels.length;
+          labels.push({ token: null, arg_size: 0, inst_index: -1 });
+          const lab_else = labels.length;
+          labels.push({ token: null, arg_size: 0, inst_index: -1 });
+          state.i++;
+          parseExpr(state, tokens, nodes, labels, labBreak, labCont);
+          pushNode(nodes, OP.JZE, null, lab_if);
+          parseExpr(state, tokens, nodes, labels, labBreak, labCont);
+          if (tokenEqStr(tokens[state.i], "else")) {
+            state.i++;
+            pushNode(nodes, OP.JMP, null, lab_else);
+            pushNode(nodes, OP.LABEL, null, lab_if);
+            parseExpr(state, tokens, nodes, labels, labBreak, labCont);
+            pushNode(nodes, OP.LABEL, null, lab_else);
+          } else {
+            pushNode(nodes, OP.LABEL, null, lab_if);
+          }
+        } else if (tokenEqStr(tokens[state.i], "loop")) {
+          const lab_start = labels.length;
+          labels.push({ token: null, arg_size: 0, inst_index: -1 });
+          const lab_end = labels.length;
+          labels.push({ token: null, arg_size: 0, inst_index: -1 });
+          state.i++;
+          pushNode(nodes, OP.LABEL, null, lab_start);
+          parseExpr(state, tokens, nodes, labels, lab_end, lab_start);
+          pushNode(nodes, OP.JMP, null, lab_start);
+          pushNode(nodes, OP.LABEL, null, lab_end);
+        } else if (tokenEqStr(tokens[state.i], "break")) {
+          state.i++;
+          pushNode(nodes, OP.JMP, null, labBreak);
+        } else if (tokenEqStr(tokens[state.i], "continue")) {
+          state.i++;
+          pushNode(nodes, OP.JMP, null, labCont);
+        } else if (tokenEqStr(tokens[state.i], "fn")) {
+          const lab_fn = labels.length;
+          let arg_size = 0;
+          state.i++;
+          labels[lab_fn] = { token: tokens[state.i], arg_size: 0, inst_index: -1 };
+          state.i += 2; // skip 'fn' and function name
+          while (!tokenEqStr(tokens[state.i], ")")) {
+            pushNode(nodes, OP.PUSH_VARADDR, tokens[state.i], 0);
+            state.i++;
+            arg_size++;
+            if (tokenEqStr(tokens[state.i], ",")) state.i++;
+          }
+          // Back-propagate argument positions (simulate negative offsets)
+          const arg_itr = nodes[nodes.length - 1];
+          for (let i = 0; i < arg_size; i++) {
+            arg_itr.val = -4 - i;
+          }
+          state.i++; // skip ")"
+          pushNode(nodes, OP.LABEL, null, lab_fn);
+          pushNode(nodes, OP.PUSH_VARADDR, null, -2);
+          pushNode(nodes, OP.PUSH_VARADDR, null, -2);
+          pushNode(nodes, OP.GLOBAL_GET, null, 0);
+          pushNode(nodes, OP.PUSH_CONST, null, arg_size);
+          pushNode(nodes, OP.SUB, null, 0);
+          pushNode(nodes, OP.GLOBAL_SET, null, 0);
+          parseExpr(state, tokens, nodes, labels, labBreak, labCont);
+          pushNode(nodes, OP.RETURN, null, 0);
+          pushNode(nodes, OP.LABEL_FNEND, null, 0);
+        } else {
+          parseAssign(state, tokens, nodes, labels, labBreak, labCont);
+        }
+      };
+
+      // Parse all tokens into nodes and labels.
+      const parseTokens = (tokens, nodes, labels) => {
+        const state = { i: 0 };
+        while (state.i < tokens.length) {
+          parseExpr(state, tokens, nodes, labels, -1, -1);
+        }
+      };
+
+      // --- Analysis & Code Generation ---
+      const analyzePush = (nodes, locals, offsets) => {
+        let off = 0;
+        let localCount = 0;
+        for (const n of nodes) {
+          if (n.op === OP.LABEL_FNEND) {
+            off = 0;
+            localCount = 0;
+            continue;
+          }
+          if (!n.token) continue;
+          if (n.op === OP.PUSH_CONST) {
+            n.val = tokenToInt(n.token);
+          } else if (n.op === OP.PUSH_VARADDR) {
+            let found = false;
+            for (let i = 0; i < localCount; i++) {
+              if (locals[i] && locals[i].text === n.token.text) {
+                n.val = offsets[i];
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              locals[localCount] = n.token;
+              offsets[localCount] = n.val !== 0 ? n.val : off;
+              n.val = off;
+              off++;
+              localCount++;
+            }
+          }
+        }
+      };
+
+      const findLabel = (labels, token) => {
+        for (let i = 0; i < labels.length; i++) {
+          if (labels[i].token && labels[i].token.text === token.text) return i;
+        }
+        return -1;
+      };
+
+      const toInstructions = (mem, nodes, labels) => {
+        let iptr = GLOB_SZ;
+        for (const n of nodes) {
+          if (n.op === OP.LABEL) {
+            labels[n.val].inst_index = iptr;
+          } else if (n.op === OP.PUSH_CONST || n.op === OP.PUSH_VARADDR) {
+            mem[iptr++] = { op: n.op };
+            mem[iptr++] = { val: n.val };
+          } else if (n.op === OP.JMP || n.op === OP.JZE) {
+            mem[iptr++] = { op: n.op };
+            mem[iptr++] = { val: n.val };
+          } else if (n.op === OP.CALL) {
+            mem[iptr++] = { op: n.op };
+            mem[iptr++] = { val: findLabel(labels, n.token) };
+          } else if (n.op === OP.NOP) {
+            continue;
+          } else {
+            mem[iptr++] = { op: n.op };
+          }
+        }
+        // Initialize VM registers.
+        mem[GLOBAL.IP] = { val: GLOB_SZ };
+        mem[GLOBAL.BP] = { val: iptr };
+        mem[GLOBAL.SP] = { val: iptr + STK_SZ };
+        // Mark end of instructions.
+        mem[iptr] = { op: OP.NULL };
+      };
+
+      const analyzeScript = (mem, nodes, locals, offsets, labels) => {
+        analyzePush(nodes, locals, offsets);
+        toInstructions(mem, nodes, labels);
+      };
+
+      const linkInstructions = (mem, labels) => {
+        let i = GLOB_SZ;
+        while (i < mem.length && mem[i]) {
+          if (
+            mem[i].op === OP.JMP ||
+            mem[i].op === OP.JZE ||
+            mem[i].op === OP.CALL
+          ) {
+            i++;
+            mem[i].val = labels[mem[i].val].inst_index;
+          } else if (
+            mem[i].op === OP.PUSH_CONST ||
+            mem[i].op === OP.PUSH_VARADDR
+          ) {
+            i += 2;
+          } else {
+            i++;
+          }
+        }
+      };
+
+      // --- (Optional) Debug Function: Dump memory ---
+      const outMemory = (mem) => {
+        let output = "";
+        for (let i = 1; i < 200; i++) {
+          output += mem[i] && mem[i].val !== undefined ? mem[i].val + "\n" : "0\n";
+        }
+        // Uncomment to print memory dump:
+        // printToTerminal(output);
+      };
+
+      // --- Asynchronous VM Execution ---
+      // Helper: Wait for the next input character in real time.
+      function getNextInputChar() {
+        return new Promise((resolve) => {
+          // If a key is already queued, resolve immediately.
+          if (inputQueue.length > 0) {
+            return resolve(inputQueue.shift());
+          }
+          // Otherwise, add a one‑time event listener.
+          const onKey = (e) => {
+            if (e.key.length === 1) {
+              document.removeEventListener("keydown", onKey);
+              resolve(e.key);
+            }
+          };
+          document.addEventListener("keydown", onKey);
+        });
+      }
+
+      // The VM's main execution loop (asynchronous).
+      async function runScript(mem) {
+        let a1;
+        while (mem[mem[GLOBAL.IP].val].op !== OP.NULL) {
+          const instr = mem[mem[GLOBAL.IP].val];
+          switch (instr.op) {
+            case OP.NOP:
+              break;
+            case OP.PUSH_CONST:
+              mem[GLOBAL.IP].val++;
+              mem[mem[GLOBAL.SP].val++] = { val: mem[mem[GLOBAL.IP].val].val };
+              break;
+            case OP.PUSH_VARADDR:
+              mem[GLOBAL.IP].val++;
+              mem[mem[GLOBAL.SP].val++] = {
+                val: mem[GLOBAL.BP].val + mem[mem[GLOBAL.IP].val].val,
+              };
+              break;
+            case OP.GLOBAL_GET: {
+              const addr = mem[mem[GLOBAL.SP].val - 1].val;
+              mem[mem[GLOBAL.SP].val - 1] = { val: mem[addr] ? mem[addr].val : 0 };
+              break;
+            }
+            case OP.GLOBAL_SET: {
+              const addr2 = mem[mem[GLOBAL.SP].val - 2].val;
+              mem[addr2] = { val: mem[mem[GLOBAL.SP].val - 1].val };
+              mem[GLOBAL.SP].val -= 2;
+              break;
+            }
+            case OP.CALL:
+              mem[mem[GLOBAL.SP].val++] = { val: mem[GLOBAL.IP].val + 1 };
+              mem[mem[GLOBAL.SP].val++] = { val: mem[GLOBAL.SP].val };
+              mem[mem[GLOBAL.SP].val++] = { val: mem[GLOBAL.BP].val };
+              mem[GLOBAL.IP].val = mem[mem[GLOBAL.IP].val + 1].val - 1;
+              mem[GLOBAL.BP].val = mem[GLOBAL.SP].val + 3;
+              mem[GLOBAL.SP].val += STK_SZ;
+              break;
+            case OP.RETURN:
+              a1 = mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.IP].val = mem[mem[GLOBAL.BP].val - 3].val;
+              mem[GLOBAL.SP].val = mem[mem[GLOBAL.BP].val - 2].val;
+              mem[GLOBAL.BP].val = mem[mem[GLOBAL.BP].val - 1].val;
+              mem[mem[GLOBAL.SP].val++] = { val: a1 };
+              break;
+            case OP.JMP:
+              mem[GLOBAL.IP].val = mem[mem[GLOBAL.IP].val + 1].val - 1;
+              break;
+            case OP.JZE:
+              if (mem[mem[GLOBAL.SP].val - 1].val === 0) {
+                mem[GLOBAL.IP].val = mem[mem[GLOBAL.IP].val + 1].val - 1;
+              } else {
+                mem[GLOBAL.IP].val += 1;
+              }
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.OR:
+              mem[mem[GLOBAL.SP].val - 2].val |= mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.AND:
+              mem[mem[GLOBAL.SP].val - 2].val &= mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.EQ:
+              mem[mem[GLOBAL.SP].val - 2].val =
+                mem[mem[GLOBAL.SP].val - 2].val === mem[mem[GLOBAL.SP].val - 1].val
+                  ? 1
+                  : 0;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.NE:
+              mem[mem[GLOBAL.SP].val - 2].val =
+                mem[mem[GLOBAL.SP].val - 2].val !== mem[mem[GLOBAL.SP].val - 1].val
+                  ? 1
+                  : 0;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.LT:
+              mem[mem[GLOBAL.SP].val - 2].val =
+                mem[mem[GLOBAL.SP].val - 2].val < mem[mem[GLOBAL.SP].val - 1].val ? 1 : 0;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.GT:
+              mem[mem[GLOBAL.SP].val - 2].val =
+                mem[mem[GLOBAL.SP].val - 2].val > mem[mem[GLOBAL.SP].val - 1].val ? 1 : 0;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.ADD:
+              mem[mem[GLOBAL.SP].val - 2].val += mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.SUB:
+              mem[mem[GLOBAL.SP].val - 2].val -= mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.MUL:
+              mem[mem[GLOBAL.SP].val - 2].val *= mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.DIV:
+              mem[mem[GLOBAL.SP].val - 2].val = Math.floor(
+                mem[mem[GLOBAL.SP].val - 2].val / mem[mem[GLOBAL.SP].val - 1].val
+              );
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.MOD:
+              mem[mem[GLOBAL.SP].val - 2].val %= mem[mem[GLOBAL.SP].val - 1].val;
+              mem[GLOBAL.SP].val--;
+              break;
+            case OP.SVC:
+              a1 = mem[mem[GLOBAL.SP].val - 1].val;
+              if (a1 === 0) {
+                // SVC 0: Real-time input. Wait for a key press.
+                let inputChar = "";
+                if (rawMode) {
+                  if (inputQueue.length === 0) {
+                    inputChar = await getNextInputChar();
+                  } else {
+                    inputChar = inputQueue.shift();
+                  }
+                } else {
+                  inputChar = prompt("Enter a character:") || "";
+                }
+                mem[GLOBAL.IO] = { val: inputChar ? inputChar.charCodeAt(0) : 0 };
+              } else if (a1 === 1) {
+                // SVC 1: Output character to terminal.
+                const charCode = mem[GLOBAL.IO] ? mem[GLOBAL.IO].val : 0;
+                printToTerminal(String.fromCharCode(charCode));
+              } else if (a1 === 2) {
+                // SVC 2: Reserved for sleep (currently a no-op).
+              }
+              break;
+            default:
+              break;
+          }
+          mem[GLOBAL.IP].val++;
+          // Yield to the event loop for UI responsiveness.
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
+      // --- Compilation ---
+      const compile = (code) => {
+        const tokens = tokenize(code);
+        const nodes = [];
+        const labels = [];
+        parseTokens(tokens, nodes, labels);
+        const locals = [];
+        const offsets = [];
+        const mem = new Array(MEM_SZ).fill(null);
+        analyzeScript(mem, nodes, locals, offsets, labels);
+        linkInstructions(mem, labels);
+        // Uncomment the next line for debugging:
+        // outMemory(mem);
+        return mem;
+      };
+
+      async function runVM(code) {
+        const mem = compile(code);
+        await runScript(mem);
+      }
+
+      // --- Terminal Output ---
+      const terminal = document.getElementById("terminal");
+      const printToTerminal = (text) => {
+        terminal.textContent += text + "\n";
+        terminal.scrollTop = terminal.scrollHeight;
+      };
+
+      // --- Event Listeners ---
+      const codeInput = document.getElementById("codeInput");
+      const runButton = document.getElementById("runButton");
+
+      // Capture keydown events for real-time input.
+      document.addEventListener("keydown", (e) => {
+        if (e.key.length === 1) {
+          inputQueue.push(e.key);
+        }
+      });
+
+      runButton.addEventListener("click", async () => {
+        terminal.textContent = "";
+        const code = codeInput.value;
+        await runVM(code);
+      });
+    </script>
+  </body>
 </html>
