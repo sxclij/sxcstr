@@ -677,7 +677,7 @@ fn main() (
         while (true) {
           const result = await StepVM();
           if (result === 0) {
-            mem[GLOBAL_IO] = await enqueueInputChar();
+            mem[GLOBAL_IO] = await dequeueInputChar();
           } else if (result === 1) {
             await printToTerminal(mem[GLOBAL_IO]);
           } else if (result === 2) {
@@ -689,7 +689,7 @@ fn main() (
       const terminal = document.getElementById("terminal");
       const inputQueue = [];
 
-      async function enqueueInputChar() {
+      async function dequeueInputChar() {
         console.log(inputQueue[0]);
         if (inputQueue.length) {
           return inputQueue.shift();
