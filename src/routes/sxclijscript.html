@@ -172,19 +172,43 @@ fn main() (
   <script>
     (() => {
       "use strict";
-      const OP_NULL = 0, OP_NOP = 1, OP_PUSH_CONST = 2, OP_PUSH_VARADDR = 3,
-        OP_TEST01 = 4, OP_TEST02 = 5, OP_TEST03 = 6, OP_GLOBAL_GET = 7,
-        OP_GLOBAL_SET = 8, OP_CALL = 9, OP_RETURN = 10, OP_JMP = 11,
-        OP_JZE = 12, OP_OR = 13, OP_AND = 14, OP_EQ = 15, OP_NE = 16,
-        OP_LT = 17, OP_GT = 18, OP_ADD = 19, OP_SUB = 20, OP_MUL = 21,
-        OP_DIV = 22, OP_MOD = 23, OP_SVC = 24, OP_LABEL = 25, OP_LABEL_FNEND = 26;
-      const GLOBAL_NULL = 0, GLOBAL_IP = 1, GLOBAL_SP = 2, GLOBAL_BP = 3, GLOBAL_IO = 4;
+
+      const OP_NULL = 0;
+      const OP_NOP = 1;
+      const OP_PUSH_CONST = 2;
+      const OP_PUSH_VARADDR = 3;
+      const OP_TEST01 = 4;
+      const OP_TEST02 = 5;
+      const OP_TEST03 = 6;
+      const OP_GLOBAL_GET = 7;
+      const OP_GLOBAL_SET = 8;
+      const OP_CALL = 9;
+      const OP_RETURN = 10;
+      const OP_JMP = 11;
+      const OP_JZE = 12;
+      const OP_OR = 13;
+      const OP_AND = 14;
+      const OP_EQ = 15;
+      const OP_NE = 16;
+      const OP_LT = 17;
+      const OP_GT = 18;
+      const OP_ADD = 19;
+      const OP_SUB = 20;
+      const OP_MUL = 21;
+      const OP_DIV = 22;
+      const OP_MOD = 23;
+      const OP_SVC = 24;
+      const OP_LABEL = 25;
+      const OP_LABEL_FNEND = 26;
+
+      const GLOBAL_NULL = 0, GLOBAL_IP = 1, GLOBAL_SP = 2,
+        GLOBAL_BP = 3, GLOBAL_IO = 4;
       const MEM_SZ = 1 << 20, GLOB_SZ = 1 << 8, STK_SZ = 1 << 10;
 
+      let mem = new Int32Array(MEM_SZ)
 
       const isNum = str => /^[0-9-]/.test(str);
       const tokenToInt = token => parseInt(token, 10);
-
 
       function tokenize(src) {
         const tokens = [];
@@ -217,6 +241,7 @@ fn main() (
           this.val = val;
         }
       }
+
       class Label {
         constructor(token = null, arg_size = 0, inst_index = 0) {
           this.token = token;
@@ -233,13 +258,16 @@ fn main() (
           this.labels = [];
           this.labSize = 0;
         }
-        current() { return this.tokens[this.pos] || ""; }
+        current() {
+          return this.tokens[this.pos] || "";
+        }
         consume(token) {
           if (this.current() === token) this.pos++;
           else throw new Error(`Expected token ${token} but got ${this.current()}`);
         }
-        pushNode(op, token = null, val = 0) { this.nodes.push(new Node(op, token, val)); }
-
+        pushNode(op, token = null, val = 0) {
+          this.nodes.push(new Node(op, token, val));
+        }
         parsePrimary(lab_break, lab_cont) {
           if (this.current() === "(") {
             this.consume("(");
@@ -257,7 +285,6 @@ fn main() (
             this.pos++;
           }
         }
-
         parsePostfix(lab_break, lab_cont) {
           const startToken = this.current();
           if (this.pos + 1 < this.tokens.length && this.tokens[this.pos + 1] === "(") {
@@ -270,7 +297,6 @@ fn main() (
             this.parsePrimary(lab_break, lab_cont);
           }
         }
-
         parseUnary(lab_break, lab_cont) {
           if (this.current() === "&") {
             this.consume("&");
@@ -284,7 +310,6 @@ fn main() (
             this.parsePostfix(lab_break, lab_cont);
           }
         }
-
         parseMul(lab_break, lab_cont) {
           this.parseUnary(lab_break, lab_cont);
           while (["*", "/", "%"].includes(this.current())) {
@@ -294,7 +319,6 @@ fn main() (
             this.pushNode(op === "*" ? OP_MUL : op === "/" ? OP_DIV : OP_MOD);
           }
         }
-
         parseAdd(lab_break, lab_cont) {
           this.parseMul(lab_break, lab_cont);
           while (["+", "-"].includes(this.current())) {
@@ -304,7 +328,6 @@ fn main() (
             this.pushNode(op === "+" ? OP_ADD : OP_SUB);
           }
         }
-
         parseRel(lab_break, lab_cont) {
           this.parseAdd(lab_break, lab_cont);
           while (["<", ">"].includes(this.current())) {
@@ -314,7 +337,6 @@ fn main() (
             this.pushNode(op === "<" ? OP_LT : OP_GT);
           }
         }
-
         parseEq(lab_break, lab_cont) {
           this.parseRel(lab_break, lab_cont);
           while (["==", "!="].includes(this.current())) {
@@ -324,7 +346,6 @@ fn main() (
             this.pushNode(op === "==" ? OP_EQ : OP_NE);
           }
         }
-
         parseAnd(lab_break, lab_cont) {
           this.parseEq(lab_break, lab_cont);
           while (this.current() === "&&") {
@@ -333,7 +354,6 @@ fn main() (
             this.pushNode(OP_AND);
           }
         }
-
         parseOr(lab_break, lab_cont) {
           this.parseAnd(lab_break, lab_cont);
           while (this.current() === "||") {
@@ -342,7 +362,6 @@ fn main() (
             this.pushNode(OP_OR);
           }
         }
-
         parseAssign(lab_break, lab_cont) {
           this.parseOr(lab_break, lab_cont);
           while (this.current() === "=") {
@@ -351,12 +370,11 @@ fn main() (
             this.pushNode(OP_GLOBAL_SET);
           }
         }
-
         parseExpr(lab_break, lab_cont) {
           if (this.current() === "if") {
             const lab_if = this.labSize++;
-            this.labels[lab_if] = new Label(null);
             const lab_else = this.labSize++;
+            this.labels[lab_if] = new Label(null);
             this.labels[lab_else] = new Label(null);
             this.consume("if");
             this.parseExpr(lab_break, lab_cont);
@@ -391,7 +409,6 @@ fn main() (
             this.parseAssign(lab_break, lab_cont);
           }
         }
-
         parseFn(lab_break, lab_cont) {
           if (this.current() === "fn") {
             const lab_fn = this.labSize++;
@@ -424,7 +441,6 @@ fn main() (
             this.parseExpr(lab_break, lab_cont);
           }
         }
-
         parseTokens() {
           while (this.pos < this.tokens.length) {
             this.parseFn(-1, -1);
@@ -432,11 +448,14 @@ fn main() (
         }
       }
 
-
       function analyzePush(nodes) {
-        let off = 0, locals = {};
-        for (let n of nodes) {
-          if (n.op === OP_LABEL_FNEND) { off = 0; locals = {}; continue; }
+        let offset = 0, locals = {};
+        for (const n of nodes) {
+          if (n.op === OP_LABEL_FNEND) {
+            offset = 0;
+            locals = {};
+            continue;
+          }
           if (!n.token) continue;
           if (n.op === OP_PUSH_CONST) {
             n.val = tokenToInt(n.token);
@@ -445,13 +464,12 @@ fn main() (
               if (!(n.token in locals)) locals[n.token] = n.val;
               else n.val = locals[n.token];
             } else {
-              if (!(n.token in locals)) { locals[n.token] = off; n.val = off; off++; }
+              if (!(n.token in locals)) { locals[n.token] = offset; n.val = offset; offset++; }
               else n.val = locals[n.token];
             }
           }
         }
       }
-
 
       function findLabel(labels, labSize, token) {
         for (let i = 0; i < labSize; i++) {
@@ -460,19 +478,22 @@ fn main() (
         return -1;
       }
 
-
       function toInstructions(nodes, labels, labSize) {
-        const mem = new Int32Array(MEM_SZ);
         let iptr = GLOB_SZ;
-        for (let n of nodes) {
+        for (const n of nodes) {
           if (n.op === OP_LABEL) {
             labels[n.val].inst_index = iptr;
-          } else if (n.op === OP_PUSH_CONST || n.op === OP_PUSH_VARADDR || n.op === OP_JMP || n.op === OP_JZE) {
+          } else if (
+            n.op === OP_PUSH_CONST ||
+            n.op === OP_PUSH_VARADDR ||
+            n.op === OP_JMP ||
+            n.op === OP_JZE
+          ) {
             mem[iptr++] = n.op;
             mem[iptr++] = n.val;
           } else if (n.op === OP_CALL) {
             mem[iptr++] = n.op;
-            mem[iptr++] = findLabel(labels, labSize, n.token)
+            mem[iptr++] = findLabel(labels, labSize, n.token);
           } else if (n.op === OP_NOP) {
             continue;
           } else {
@@ -482,11 +503,11 @@ fn main() (
         mem[GLOBAL_IP] = GLOB_SZ;
         mem[GLOBAL_BP] = iptr;
         mem[GLOBAL_SP] = iptr + STK_SZ;
-        return mem;
+        return;
       }
 
       function linkInstructions(mem, labels, labSize) {
-        for (let i = GLOB_SZ; i < mem.length && mem[i].op !== OP_NULL; i++) {
+        for (let i = GLOB_SZ; i < mem.length && mem[i] !== OP_NULL; i++) {
           if (mem[i] === OP_JMP || mem[i] === OP_JZE || mem[i] === OP_CALL) {
             i++;
             mem[i] = labels[mem[i]].inst_index;
@@ -496,227 +517,209 @@ fn main() (
         }
       }
 
-
       function compile(src) {
         const tokens = tokenize(src);
         const parser = new Parser(tokens);
         parser.parseTokens();
         analyzePush(parser.nodes);
-        const mem = toInstructions(parser.nodes, parser.labels, parser.labSize);
+        toInstructions(parser.nodes, parser.labels, parser.labSize);
         linkInstructions(mem, parser.labels, parser.labSize);
-        return mem;
+        return;
       }
 
-      async function runScript(mem) {
-        while (mem[mem[GLOBAL_IP]] !== OP_NULL) {
-          let ip = mem[GLOBAL_IP];
-          let op = mem[ip];
+      function StepVM() {
+        while (true) {
+          const ip = mem[GLOBAL_IP];
+          const op = mem[ip];
           switch (op) {
             case OP_NOP:
               break;
-            case OP_PUSH_CONST:
-              mem[GLOBAL_IP]++;  // Advance to operand
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp] = mem[mem[GLOBAL_IP]];
-                mem[GLOBAL_SP] = sp + 1;
-              }
-              break;
-            case OP_PUSH_VARADDR:
+            case OP_PUSH_CONST: {
               mem[GLOBAL_IP]++;
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp] = mem[GLOBAL_BP] + mem[mem[GLOBAL_IP]];
-                mem[GLOBAL_SP] = sp + 1;
-              }
+              const sp = mem[GLOBAL_SP];
+              mem[sp] = mem[mem[GLOBAL_IP]];
+              mem[GLOBAL_SP] = sp + 1;
               break;
-            case OP_GLOBAL_GET:
-              {
-                let sp = mem[GLOBAL_SP] - 1;
-                let addr = mem[sp];
-                mem[sp] = mem[addr];
-              }
+            }
+            case OP_PUSH_VARADDR: {
+              mem[GLOBAL_IP]++;
+              const sp = mem[GLOBAL_SP];
+              mem[sp] = mem[GLOBAL_BP] + mem[mem[GLOBAL_IP]];
+              mem[GLOBAL_SP] = sp + 1;
               break;
-            case OP_GLOBAL_SET:
-              {
-                let sp = mem[GLOBAL_SP];
-                let addr = mem[sp - 2];
-                mem[addr] = mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 2;
-              }
+            }
+            case OP_GLOBAL_GET: {
+              const sp = mem[GLOBAL_SP] - 1;
+              const addr = mem[sp];
+              mem[sp] = mem[addr];
               break;
-            case OP_CALL:
-              {
-                let sp = mem[GLOBAL_SP];
-                // Push return address (current IP + 1)
-                mem[sp] = mem[GLOBAL_IP] + 1;
-                // Push current SP
-                mem[sp + 1] = mem[GLOBAL_SP];
-                // Push current BP
-                mem[sp + 2] = mem[GLOBAL_BP];
-                // Set IP to target (operand cell holds target; subtract 1 because of post‐increment)
-                mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
-                // Set new BP to current SP + 3
-                mem[GLOBAL_BP] = sp + 3;
-                // Allocate new frame
-                mem[GLOBAL_SP] = sp + STK_SZ;
-              }
+            }
+            case OP_GLOBAL_SET: {b
+              const sp = mem[GLOBAL_SP];
+              const addr = mem[sp - 2];
+              mem[addr] = mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 2;
               break;
-            case OP_RETURN:
-              {
-                let sp = mem[GLOBAL_SP];
-                let retVal = mem[sp - 1];
-                mem[GLOBAL_IP] = mem[mem[GLOBAL_BP] - 3];
-                mem[GLOBAL_SP] = mem[mem[GLOBAL_BP] - 2];
-                mem[GLOBAL_BP] = mem[mem[GLOBAL_BP] - 1];
-                sp = mem[GLOBAL_SP];
-                mem[sp] = retVal;
-                mem[GLOBAL_SP] = sp + 1;
-              }
+            }
+            case OP_CALL: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp] = mem[GLOBAL_IP] + 1;
+              mem[sp + 1] = mem[GLOBAL_SP];
+              mem[sp + 2] = mem[GLOBAL_BP];
+              mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
+              mem[GLOBAL_BP] = sp + 3;
+              mem[GLOBAL_SP] = sp + STK_SZ;
               break;
+            }
+            case OP_RETURN: {
+              let sp = mem[GLOBAL_SP];
+              const retVal = mem[sp - 1];
+              mem[GLOBAL_IP] = mem[mem[GLOBAL_BP] - 3];
+              mem[GLOBAL_SP] = mem[mem[GLOBAL_BP] - 2];
+              mem[GLOBAL_BP] = mem[mem[GLOBAL_BP] - 1];
+              sp = mem[GLOBAL_SP];
+              mem[sp] = retVal;
+              mem[GLOBAL_SP] = sp + 1;
+              break;
+            }
             case OP_JMP:
               mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
               break;
-            case OP_JZE:
-              {
-                let sp = mem[GLOBAL_SP];
-                if (mem[sp - 1] === 0)
-                  mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
-                else
-                  mem[GLOBAL_IP] = mem[GLOBAL_IP] + 1;
-                mem[GLOBAL_SP] = sp - 1;
+            case OP_JZE: {
+              const sp = mem[GLOBAL_SP];
+              if (mem[sp - 1] === 0) {
+                mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
+              } else {
+                mem[GLOBAL_IP]++;
               }
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_OR:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] |= mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_OR: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] |= mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_AND:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] &= mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_AND: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] &= mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_EQ:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] = (mem[sp - 2] === mem[sp - 1]) ? 1 : 0;
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_EQ: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] = mem[sp - 2] === mem[sp - 1] ? 1 : 0;
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_NE:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] = (mem[sp - 2] !== mem[sp - 1]) ? 1 : 0;
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_NE: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] = mem[sp - 2] !== mem[sp - 1] ? 1 : 0;
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_LT:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] = (mem[sp - 2] < mem[sp - 1]) ? 1 : 0;
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_LT: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] = mem[sp - 2] < mem[sp - 1] ? 1 : 0;
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_GT:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] = (mem[sp - 2] > mem[sp - 1]) ? 1 : 0;
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_GT: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] = mem[sp - 2] > mem[sp - 1] ? 1 : 0;
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_ADD:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] += mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_ADD: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] += mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_SUB:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] -= mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_SUB: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] -= mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_MUL:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] *= mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_MUL: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] *= mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_DIV:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] = Math.floor(mem[sp - 2] / mem[sp - 1]);
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_DIV: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] = Math.floor(mem[sp - 2] / mem[sp - 1]);
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_MOD:
-              {
-                let sp = mem[GLOBAL_SP];
-                mem[sp - 2] %= mem[sp - 1];
-                mem[GLOBAL_SP] = sp - 1;
-              }
+            }
+            case OP_MOD: {
+              const sp = mem[GLOBAL_SP];
+              mem[sp - 2] %= mem[sp - 1];
+              mem[GLOBAL_SP] = sp - 1;
               break;
-            case OP_SVC:
-              {
-                let sp = mem[GLOBAL_SP];
-                let svcArg = mem[sp - 1];
-                if (svcArg === 0) {
-                  mem[GLOBAL_IO] = await getNextInputChar();
-                } else if (svcArg === 1) {
-                  printToTerminal(String.fromCharCode(mem[GLOBAL_IO]));
-                } else if (svcArg === 2) {
-                  await new Promise(resolve => setTimeout(resolve, mem[GLOBAL_IO] * 1000));
-                }
-              }
-              break;
+            }
+            case OP_SVC: {
+              const sp = mem[GLOBAL_SP];
+              return mem[sp - 1];
+            }
             default:
               break;
           }
-          // Increment IP at the end of each loop iteration
           mem[GLOBAL_IP]++;
         }
       }
-      const terminal = document.getElementById("terminal");
-      const printToTerminal = text => terminal.textContent += text;
 
+      async function runVM(code) {
+        await compile(code);
+        while (true) {
+          const result = await StepVM();
+          if (result === 0) {
+            mem[GLOBAL_IO] = await enqueueInputChar();
+          } else if (result === 1) {
+            await printToTerminal(mem[GLOBAL_IO]);
+          } else if (result === 2) {
+            await new Promise(resolve => setTimeout(resolve, mem[GLOBAL_IO] * 1000));
+          }
+        }
+      }
+
+      const terminal = document.getElementById("terminal");
       const inputQueue = [];
+
+      async function enqueueInputChar() {
+        console.log(inputQueue[0]);
+        if (inputQueue.length) {
+          return inputQueue.shift();
+        } else {
+          return 0;
+        }
+      }
+
+      async function printToTerminal(ch) {
+        console.log(ch);
+        terminal.textContent += String.fromCharCode(ch);
+      }
+
       document.addEventListener("keydown", ({ key }) => {
         if (key.length === 1) inputQueue.push(key.charCodeAt(0));
         else if (key === "Enter") inputQueue.push(13);
       });
 
-      async function getNextInputChar() {
-        return new Promise(resolve => {
-          const checkQueue = () => {
-            if (inputQueue.length) resolve(inputQueue.shift());
-            else setTimeout(checkQueue, 10);
-          };
-          checkQueue();
-        });
-      }
-
-      async function runVM(code) {
-        const mem = compile(code);
-        await runScript(mem);
-      }
-
       document.getElementById("runButton").addEventListener("click", async () => {
         terminal.textContent = "";
         const code = document.getElementById("codeInput").value;
-        await runVM(code);
+        try {
+          await runVM(code);
+        } catch (err) {
+          printToTerminal(`\nError: ${err.message}`);
+        }
       });
 
-
       window.compile = compile;
-      window.runScript = runScript;
+      window.runVM = runVM;
     })();
   </script>
 </body>
