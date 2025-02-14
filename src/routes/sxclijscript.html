@@ -15,20 +15,20 @@
       color: #eee;
     }
 
-    #left-panel,
-    #terminal-container {
+    #left_panel,
+    #terminal_container {
       padding: 10px;
       box-sizing: border-box;
     }
 
-    #left-panel {
+    #left_panel {
       width: 40%;
       display: flex;
       flex-direction: column;
       border-right: 1px solid #444;
     }
 
-    #terminal-container {
+    #terminal_container {
       width: 60%;
       display: flex;
       flex-direction: column;
@@ -45,7 +45,7 @@
       white-space: pre-wrap;
     }
 
-    #codeInput {
+    #code_input {
       width: 100%;
       flex-grow: 1;
       font-family: monospace;
@@ -55,7 +55,7 @@
       margin-bottom: 10px;
     }
 
-    #button-container {
+    #button_container {
       display: flex;
       gap: 10px;
       margin-bottom: 10px;
@@ -70,11 +70,11 @@
 </head>
 
 <body>
-  <div id="left-panel">
-    <div id="button-container">
-      <button id="runButton" class="button">Run</button>
+  <div id="left_panel">
+    <div id="button_container">
+      <button id="run_button" class="button">Run</button>
     </div>
-    <textarea id="codeInput" placeholder="Enter your sxclijscript code here">main()
+    <textarea id="code_input" placeholder="Enter your sxclijscript code here">main()
 
 fn _read() (
     &result = svc(0)
@@ -165,50 +165,51 @@ fn main() (
 )
     </textarea>
   </div>
-  <div id="terminal-container">
+  <div id="terminal_container">
     <div id="terminal"></div>
   </div>
 
   <script>
     (() => {
       "use strict";
+      const op_null = 0,
+        op_nop = 1,
+        op_push_const = 2,
+        op_push_varaddr = 3,
+        op_test01 = 4,
+        op_test02 = 5,
+        op_test03 = 6,
+        op_global_get = 7,
+        op_global_set = 8,
+        op_call = 9,
+        op_return = 10,
+        op_jmp = 11,
+        op_jze = 12,
+        op_or = 13,
+        op_and = 14,
+        op_eq = 15,
+        op_ne = 16,
+        op_lt = 17,
+        op_gt = 18,
+        op_add = 19,
+        op_sub = 20,
+        op_mul = 21,
+        op_div = 22,
+        op_mod = 23,
+        op_svc = 24,
+        op_label = 25,
+        op_label_fnend = 26;
+      const global_null = 0,
+        global_ip = 1,
+        global_sp = 2,
+        global_bp = 3,
+        global_io = 4;
+      const mem_sz = 1 << 20,
+        glob_sz = 1 << 8,
+        stk_sz = 1 << 10;
 
-      const OP_NULL = 0;
-      const OP_NOP = 1;
-      const OP_PUSH_CONST = 2;
-      const OP_PUSH_VARADDR = 3;
-      const OP_TEST01 = 4;
-      const OP_TEST02 = 5;
-      const OP_TEST03 = 6;
-      const OP_GLOBAL_GET = 7;
-      const OP_GLOBAL_SET = 8;
-      const OP_CALL = 9;
-      const OP_RETURN = 10;
-      const OP_JMP = 11;
-      const OP_JZE = 12;
-      const OP_OR = 13;
-      const OP_AND = 14;
-      const OP_EQ = 15;
-      const OP_NE = 16;
-      const OP_LT = 17;
-      const OP_GT = 18;
-      const OP_ADD = 19;
-      const OP_SUB = 20;
-      const OP_MUL = 21;
-      const OP_DIV = 22;
-      const OP_MOD = 23;
-      const OP_SVC = 24;
-      const OP_LABEL = 25;
-      const OP_LABEL_FNEND = 26;
-
-      const GLOBAL_NULL = 0, GLOBAL_IP = 1, GLOBAL_SP = 2,
-        GLOBAL_BP = 3, GLOBAL_IO = 4;
-      const MEM_SZ = 1 << 20, GLOB_SZ = 1 << 8, STK_SZ = 1 << 10;
-
-      let mem = new Int32Array(MEM_SZ)
-
-      const isNum = str => /^[0-9-]/.test(str);
-      const tokenToInt = token => parseInt(token, 10);
+      const is_num = str => /^[0-9-]/.test(str);
+      const token_to_int = token => parseInt(token, 10);
 
       function tokenize(src) {
         const tokens = [];
@@ -217,9 +218,15 @@ fn main() (
         for (let i = 0; i < src.length; i++) {
           const ch = src[i];
           if (/\s/.test(ch)) {
-            if (token) { tokens.push(token); token = ""; }
+            if (token) {
+              tokens.push(token);
+              token = "";
+            }
           } else if (punctuations.has(ch)) {
-            if (token) { tokens.push(token); token = ""; }
+            if (token) {
+              tokens.push(token);
+              token = "";
+            }
             if ((ch === "=" || ch === "!" || ch === "&" || ch === "|") && src[i + 1] === ch) {
               tokens.push(ch + ch);
               i++;
@@ -234,15 +241,14 @@ fn main() (
         return tokens;
       }
 
-      class Node {
+      class node {
         constructor(op, token = null, val = 0) {
           this.op = op;
           this.token = token;
           this.val = val;
         }
       }
-
-      class Label {
+      class label {
         constructor(token = null, arg_size = 0, inst_index = 0) {
           this.token = token;
           this.arg_size = arg_size;
@@ -250,13 +256,13 @@ fn main() (
         }
       }
 
-      class Parser {
+      class parser {
         constructor(tokens) {
           this.tokens = tokens;
           this.pos = 0;
           this.nodes = [];
           this.labels = [];
-          this.labSize = 0;
+          this.lab_size = 0;
         }
         current() {
           return this.tokens[this.pos] || "";
@@ -265,160 +271,172 @@ fn main() (
           if (this.current() === token) this.pos++;
           else throw new Error(`Expected token ${token} but got ${this.current()}`);
         }
-        pushNode(op, token = null, val = 0) {
-          this.nodes.push(new Node(op, token, val));
+        push_node(op, token = null, val = 0) {
+          this.nodes.push(new node(op, token, val));
         }
-        parsePrimary(lab_break, lab_cont) {
+
+        parse_primary(lab_break, lab_cont) {
           if (this.current() === "(") {
             this.consume("(");
             while (this.current() !== ")" && this.current()) {
-              this.parseExpr(lab_break, lab_cont);
+              this.parse_expr(lab_break, lab_cont);
               if (this.current() === ",") this.consume(",");
             }
             this.consume(")");
-          } else if (isNum(this.current())) {
-            this.pushNode(OP_PUSH_CONST, this.current());
+          } else if (is_num(this.current())) {
+            this.push_node(op_push_const, this.current());
             this.pos++;
           } else {
-            this.pushNode(OP_PUSH_VARADDR, this.current());
-            this.pushNode(OP_GLOBAL_GET);
+            this.push_node(op_push_varaddr, this.current());
+            this.push_node(op_global_get);
             this.pos++;
           }
         }
-        parsePostfix(lab_break, lab_cont) {
-          const startToken = this.current();
+
+        parse_postfix(lab_break, lab_cont) {
+          const start_token = this.current();
           if (this.pos + 1 < this.tokens.length && this.tokens[this.pos + 1] === "(") {
             this.pos++;
-            this.parsePrimary(lab_break, lab_cont);
-            if (startToken === "return") this.pushNode(OP_RETURN);
-            else if (startToken === "svc") this.pushNode(OP_SVC);
-            else this.pushNode(OP_CALL, startToken);
+            this.parse_primary(lab_break, lab_cont);
+            if (start_token === "return") this.push_node(op_return);
+            else if (start_token === "svc") this.push_node(op_svc);
+            else this.push_node(op_call, start_token);
           } else {
-            this.parsePrimary(lab_break, lab_cont);
+            this.parse_primary(lab_break, lab_cont);
           }
         }
-        parseUnary(lab_break, lab_cont) {
+
+        parse_unary(lab_break, lab_cont) {
           if (this.current() === "&") {
             this.consume("&");
-            this.pushNode(OP_PUSH_VARADDR, this.current());
+            this.push_node(op_push_varaddr, this.current());
             this.pos++;
           } else if (this.current() === "*") {
             this.consume("*");
-            this.parsePostfix(lab_break, lab_cont);
-            this.pushNode(OP_GLOBAL_GET);
+            this.parse_postfix(lab_break, lab_cont);
+            this.push_node(op_global_get);
           } else {
-            this.parsePostfix(lab_break, lab_cont);
+            this.parse_postfix(lab_break, lab_cont);
           }
         }
-        parseMul(lab_break, lab_cont) {
-          this.parseUnary(lab_break, lab_cont);
+
+        parse_mul(lab_break, lab_cont) {
+          this.parse_unary(lab_break, lab_cont);
           while (["*", "/", "%"].includes(this.current())) {
             const op = this.current();
             this.pos++;
-            this.parseUnary(lab_break, lab_cont);
-            this.pushNode(op === "*" ? OP_MUL : op === "/" ? OP_DIV : OP_MOD);
+            this.parse_unary(lab_break, lab_cont);
+            this.push_node(op === "*" ? op_mul : op === "/" ? op_div : op_mod);
           }
         }
-        parseAdd(lab_break, lab_cont) {
-          this.parseMul(lab_break, lab_cont);
+
+        parse_add(lab_break, lab_cont) {
+          this.parse_mul(lab_break, lab_cont);
           while (["+", "-"].includes(this.current())) {
             const op = this.current();
             this.pos++;
-            this.parseMul(lab_break, lab_cont);
-            this.pushNode(op === "+" ? OP_ADD : OP_SUB);
+            this.parse_mul(lab_break, lab_cont);
+            this.push_node(op === "+" ? op_add : op_sub);
           }
         }
-        parseRel(lab_break, lab_cont) {
-          this.parseAdd(lab_break, lab_cont);
+
+        parse_rel(lab_break, lab_cont) {
+          this.parse_add(lab_break, lab_cont);
           while (["<", ">"].includes(this.current())) {
             const op = this.current();
             this.pos++;
-            this.parseAdd(lab_break, lab_cont);
-            this.pushNode(op === "<" ? OP_LT : OP_GT);
+            this.parse_add(lab_break, lab_cont);
+            this.push_node(op === "<" ? op_lt : op_gt);
           }
         }
-        parseEq(lab_break, lab_cont) {
-          this.parseRel(lab_break, lab_cont);
+
+        parse_eq(lab_break, lab_cont) {
+          this.parse_rel(lab_break, lab_cont);
           while (["==", "!="].includes(this.current())) {
             const op = this.current();
             this.pos++;
-            this.parseRel(lab_break, lab_cont);
-            this.pushNode(op === "==" ? OP_EQ : OP_NE);
+            this.parse_rel(lab_break, lab_cont);
+            this.push_node(op === "==" ? op_eq : op_ne);
           }
         }
-        parseAnd(lab_break, lab_cont) {
-          this.parseEq(lab_break, lab_cont);
+
+        parse_and(lab_break, lab_cont) {
+          this.parse_eq(lab_break, lab_cont);
           while (this.current() === "&&") {
             this.pos++;
-            this.parseEq(lab_break, lab_cont);
-            this.pushNode(OP_AND);
+            this.parse_eq(lab_break, lab_cont);
+            this.push_node(op_and);
           }
         }
-        parseOr(lab_break, lab_cont) {
-          this.parseAnd(lab_break, lab_cont);
+
+        parse_or(lab_break, lab_cont) {
+          this.parse_and(lab_break, lab_cont);
           while (this.current() === "||") {
             this.pos++;
-            this.parseAnd(lab_break, lab_cont);
-            this.pushNode(OP_OR);
+            this.parse_and(lab_break, lab_cont);
+            this.push_node(op_or);
           }
         }
-        parseAssign(lab_break, lab_cont) {
-          this.parseOr(lab_break, lab_cont);
+
+        parse_assign(lab_break, lab_cont) {
+          this.parse_or(lab_break, lab_cont);
           while (this.current() === "=") {
             this.consume("=");
-            this.parseOr(lab_break, lab_cont);
-            this.pushNode(OP_GLOBAL_SET);
+            this.parse_or(lab_break, lab_cont);
+            this.push_node(op_global_set);
           }
         }
-        parseExpr(lab_break, lab_cont) {
+
+        parse_expr(lab_break, lab_cont) {
           if (this.current() === "if") {
-            const lab_if = this.labSize++;
-            const lab_else = this.labSize++;
-            this.labels[lab_if] = new Label(null);
-            this.labels[lab_else] = new Label(null);
+            const lab_if = this.lab_size++;
+            this.labels[lab_if] = new label(null);
+            const lab_else = this.lab_size++;
+            this.labels[lab_else] = new label(null);
             this.consume("if");
-            this.parseExpr(lab_break, lab_cont);
-            this.pushNode(OP_JZE, null, lab_if);
-            this.parseExpr(lab_break, lab_cont);
+            this.parse_expr(lab_break, lab_cont);
+            this.push_node(op_jze, null, lab_if);
+            this.parse_expr(lab_break, lab_cont);
             if (this.current() === "else") {
               this.consume("else");
-              this.pushNode(OP_JMP, null, lab_else);
-              this.pushNode(OP_LABEL, null, lab_if);
-              this.parseExpr(lab_break, lab_cont);
-              this.pushNode(OP_LABEL, null, lab_else);
+              this.push_node(op_jmp, null, lab_else);
+              this.push_node(op_label, null, lab_if);
+              this.parse_expr(lab_break, lab_cont);
+              this.push_node(op_label, null, lab_else);
             } else {
-              this.pushNode(OP_LABEL, null, lab_if);
+              this.push_node(op_label, null, lab_if);
             }
           } else if (this.current() === "loop") {
-            const lab_start = this.labSize++;
-            const lab_end = this.labSize++;
-            this.labels[lab_start] = new Label(null);
-            this.labels[lab_end] = new Label(null);
+            const lab_start = this.lab_size++;
+            const lab_end = this.lab_size++;
+            this.labels[lab_start] = new label(null);
+            this.labels[lab_end] = new label(null);
             this.consume("loop");
-            this.pushNode(OP_LABEL, null, lab_start);
-            this.parseExpr(lab_end, lab_start);
-            this.pushNode(OP_JMP, null, lab_start);
-            this.pushNode(OP_LABEL, null, lab_end);
+            this.push_node(op_label, null, lab_start);
+            this.parse_expr(lab_end, lab_start);
+            this.push_node(op_jmp, null, lab_start);
+            this.push_node(op_label, null, lab_end);
           } else if (this.current() === "break") {
             this.consume("break");
-            this.pushNode(OP_JMP, null, lab_break);
+            this.push_node(op_jmp, null, lab_break);
           } else if (this.current() === "continue") {
             this.consume("continue");
-            this.pushNode(OP_JMP, null, lab_cont);
+            this.push_node(op_jmp, null, lab_cont);
           } else {
-            this.parseAssign(lab_break, lab_cont);
+            this.parse_assign(lab_break, lab_cont);
           }
         }
-        parseFn(lab_break, lab_cont) {
+
+        parse_fn(lab_break, lab_cont) {
           if (this.current() === "fn") {
-            const lab_fn = this.labSize++;
+            const lab_fn = this.lab_size++;
             let arg_size = 0;
             this.consume("fn");
-            this.labels[lab_fn] = new Label(this.current());
+            this.labels[lab_fn] = new label(this.current());
             this.pos++;
             this.consume("(");
             while (this.current() !== ")" && this.current()) {
-              this.pushNode(OP_PUSH_VARADDR, this.current());
+              this.push_node(op_push_varaddr, this.current());
               this.pos++;
               arg_size++;
               if (this.current() === ",") this.consume(",");
@@ -427,91 +445,92 @@ fn main() (
             for (let i = 0; i < arg_size; i++) {
               this.nodes[this.nodes.length - 1 - i].val = -4 - i;
             }
-            this.pushNode(OP_LABEL, null, lab_fn);
-            this.pushNode(OP_PUSH_VARADDR, null, -2);
-            this.pushNode(OP_PUSH_VARADDR, null, -2);
-            this.pushNode(OP_GLOBAL_GET);
-            this.pushNode(OP_PUSH_CONST, null, arg_size);
-            this.pushNode(OP_SUB);
-            this.pushNode(OP_GLOBAL_SET);
-            this.parseExpr(lab_break, lab_cont);
-            this.pushNode(OP_RETURN);
-            this.pushNode(OP_LABEL_FNEND);
+            this.push_node(op_label, null, lab_fn);
+            this.push_node(op_push_varaddr, null, -2);
+            this.push_node(op_push_varaddr, null, -2);
+            this.push_node(op_global_get);
+            this.push_node(op_push_const, null, arg_size);
+            this.push_node(op_sub);
+            this.push_node(op_global_set);
+            this.parse_expr(lab_break, lab_cont);
+            this.push_node(op_return);
+            this.push_node(op_label_fnend);
           } else {
-            this.parseExpr(lab_break, lab_cont);
+            this.parse_expr(lab_break, lab_cont);
           }
         }
-        parseTokens() {
+
+        parse_tokens() {
           while (this.pos < this.tokens.length) {
-            this.parseFn(-1, -1);
+            this.parse_fn(-1, -1);
           }
         }
       }
 
-      function analyzePush(nodes) {
-        let offset = 0, locals = {};
-        for (const n of nodes) {
-          if (n.op === OP_LABEL_FNEND) {
-            offset = 0;
+      function analyze_push(nodes) {
+        let off = 0,
+          locals = {};
+        for (let n of nodes) {
+          if (n.op === op_label_fnend) {
+            off = 0;
             locals = {};
             continue;
           }
           if (!n.token) continue;
-          if (n.op === OP_PUSH_CONST) {
-            n.val = tokenToInt(n.token);
-          } else if (n.op === OP_PUSH_VARADDR) {
+          if (n.op === op_push_const) {
+            n.val = token_to_int(n.token);
+          } else if (n.op === op_push_varaddr) {
             if (n.val < 0) {
               if (!(n.token in locals)) locals[n.token] = n.val;
               else n.val = locals[n.token];
             } else {
-              if (!(n.token in locals)) { locals[n.token] = offset; n.val = offset; offset++; }
-              else n.val = locals[n.token];
+              if (!(n.token in locals)) {
+                locals[n.token] = off;
+                n.val = off;
+                off++;
+              } else n.val = locals[n.token];
             }
           }
         }
       }
 
-      function findLabel(labels, labSize, token) {
-        for (let i = 0; i < labSize; i++) {
+      function find_label(labels, lab_size, token) {
+        for (let i = 0; i < lab_size; i++) {
           if (labels[i] && labels[i].token === token) return i;
         }
         return -1;
       }
 
-      function toInstructions(nodes, labels, labSize) {
-        let iptr = GLOB_SZ;
-        for (const n of nodes) {
-          if (n.op === OP_LABEL) {
+      function to_instructions(nodes, labels, lab_size) {
+        const mem = new Int32Array(mem_sz);
+        let iptr = glob_sz;
+        for (let n of nodes) {
+          if (n.op === op_label) {
             labels[n.val].inst_index = iptr;
-          } else if (
-            n.op === OP_PUSH_CONST ||
-            n.op === OP_PUSH_VARADDR ||
-            n.op === OP_JMP ||
-            n.op === OP_JZE
-          ) {
+          } else if (n.op === op_push_const || n.op === op_push_varaddr || n.op === op_jmp || n.op === op_jze) {
             mem[iptr++] = n.op;
             mem[iptr++] = n.val;
-          } else if (n.op === OP_CALL) {
+          } else if (n.op === op_call) {
             mem[iptr++] = n.op;
-            mem[iptr++] = findLabel(labels, labSize, n.token);
-          } else if (n.op === OP_NOP) {
+            mem[iptr++] = find_label(labels, lab_size, n.token);
+          } else if (n.op === op_nop) {
             continue;
           } else {
             mem[iptr++] = n.op;
           }
         }
-        mem[GLOBAL_IP] = GLOB_SZ;
-        mem[GLOBAL_BP] = iptr;
-        mem[GLOBAL_SP] = iptr + STK_SZ;
-        return;
+        mem[global_ip] = glob_sz;
+        mem[global_bp] = iptr;
+        mem[global_sp] = iptr + stk_sz;
+        return mem;
       }
 
-      function linkInstructions(mem, labels, labSize) {
-        for (let i = GLOB_SZ; i < mem.length && mem[i] !== OP_NULL; i++) {
-          if (mem[i] === OP_JMP || mem[i] === OP_JZE || mem[i] === OP_CALL) {
+      function link_instructions(mem, labels, lab_size) {
+        for (let i = glob_sz; i < mem.length && mem[i].op !== op_null; i++) {
+          if (mem[i] === op_jmp || mem[i] === op_jze || mem[i] === op_call) {
             i++;
             mem[i] = labels[mem[i]].inst_index;
-          } else if (mem[i] === OP_PUSH_CONST || mem[i] === OP_PUSH_VARADDR) {
+          } else if (mem[i] === op_push_const || mem[i] === op_push_varaddr) {
             i++;
           }
         }
@@ -519,207 +538,217 @@ fn main() (
 
       function compile(src) {
         const tokens = tokenize(src);
-        const parser = new Parser(tokens);
-        parser.parseTokens();
-        analyzePush(parser.nodes);
-        toInstructions(parser.nodes, parser.labels, parser.labSize);
-        linkInstructions(mem, parser.labels, parser.labSize);
-        return;
+        const parser_instance = new parser(tokens);
+        parser_instance.parse_tokens();
+        analyze_push(parser_instance.nodes);
+        const mem = to_instructions(parser_instance.nodes, parser_instance.labels, parser_instance.lab_size);
+        link_instructions(mem, parser_instance.labels, parser_instance.lab_size);
+        return mem;
       }
 
-      function StepVM() {
-        while (true) {
-          const ip = mem[GLOBAL_IP];
-          const op = mem[ip];
+      async function vm_exec(mem) {
+        while (mem[mem[global_ip]] !== op_null) {
+          let ip = mem[global_ip];
+          let op = mem[ip];
           switch (op) {
-            case OP_NOP:
+            case op_nop:
               break;
-            case OP_PUSH_CONST: {
-              mem[GLOBAL_IP]++;
-              const sp = mem[GLOBAL_SP];
-              mem[sp] = mem[mem[GLOBAL_IP]];
-              mem[GLOBAL_SP] = sp + 1;
-              break;
-            }
-            case OP_PUSH_VARADDR: {
-              mem[GLOBAL_IP]++;
-              const sp = mem[GLOBAL_SP];
-              mem[sp] = mem[GLOBAL_BP] + mem[mem[GLOBAL_IP]];
-              mem[GLOBAL_SP] = sp + 1;
-              break;
-            }
-            case OP_GLOBAL_GET: {
-              const sp = mem[GLOBAL_SP] - 1;
-              const addr = mem[sp];
-              mem[sp] = mem[addr];
-              break;
-            }
-            case OP_GLOBAL_SET: {b
-              const sp = mem[GLOBAL_SP];
-              const addr = mem[sp - 2];
-              mem[addr] = mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 2;
-              break;
-            }
-            case OP_CALL: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp] = mem[GLOBAL_IP] + 1;
-              mem[sp + 1] = mem[GLOBAL_SP];
-              mem[sp + 2] = mem[GLOBAL_BP];
-              mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
-              mem[GLOBAL_BP] = sp + 3;
-              mem[GLOBAL_SP] = sp + STK_SZ;
-              break;
-            }
-            case OP_RETURN: {
-              let sp = mem[GLOBAL_SP];
-              const retVal = mem[sp - 1];
-              mem[GLOBAL_IP] = mem[mem[GLOBAL_BP] - 3];
-              mem[GLOBAL_SP] = mem[mem[GLOBAL_BP] - 2];
-              mem[GLOBAL_BP] = mem[mem[GLOBAL_BP] - 1];
-              sp = mem[GLOBAL_SP];
-              mem[sp] = retVal;
-              mem[GLOBAL_SP] = sp + 1;
-              break;
-            }
-            case OP_JMP:
-              mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
-              break;
-            case OP_JZE: {
-              const sp = mem[GLOBAL_SP];
-              if (mem[sp - 1] === 0) {
-                mem[GLOBAL_IP] = mem[mem[GLOBAL_IP] + 1] - 1;
-              } else {
-                mem[GLOBAL_IP]++;
+            case op_push_const:
+              mem[global_ip]++; // Advance to operand
+              {
+                let sp = mem[global_sp];
+                mem[sp] = mem[mem[global_ip]];
+                mem[global_sp] = sp + 1;
               }
-              mem[GLOBAL_SP] = sp - 1;
               break;
-            }
-            case OP_OR: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] |= mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 1;
+            case op_push_varaddr:
+              mem[global_ip]++;
+              {
+                let sp = mem[global_sp];
+                mem[sp] = mem[global_bp] + mem[mem[global_ip]];
+                mem[global_sp] = sp + 1;
+              }
               break;
-            }
-            case OP_AND: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] &= mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 1;
+            case op_global_get:
+              {
+                let sp = mem[global_sp] - 1;
+                let addr = mem[sp];
+                mem[sp] = mem[addr];
+              }
               break;
-            }
-            case OP_EQ: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] = mem[sp - 2] === mem[sp - 1] ? 1 : 0;
-              mem[GLOBAL_SP] = sp - 1;
+            case op_global_set:
+              {
+                let sp = mem[global_sp];
+                let addr = mem[sp - 2];
+                mem[addr] = mem[sp - 1];
+                mem[global_sp] = sp - 2;
+              }
               break;
-            }
-            case OP_NE: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] = mem[sp - 2] !== mem[sp - 1] ? 1 : 0;
-              mem[GLOBAL_SP] = sp - 1;
+            case op_call:
+              {
+                let sp = mem[global_sp];
+                mem[sp] = mem[global_ip] + 1;
+                mem[sp + 1] = mem[global_sp];
+                mem[sp + 2] = mem[global_bp];
+                mem[global_ip] = mem[mem[global_ip] + 1] - 1;
+                mem[global_bp] = sp + 3;
+                mem[global_sp] = sp + stk_sz;
+              }
               break;
-            }
-            case OP_LT: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] = mem[sp - 2] < mem[sp - 1] ? 1 : 0;
-              mem[GLOBAL_SP] = sp - 1;
+            case op_return:
+              {
+                let sp = mem[global_sp];
+                let ret_val = mem[sp - 1];
+                mem[global_ip] = mem[mem[global_bp] - 3];
+                mem[global_sp] = mem[mem[global_bp] - 2];
+                mem[global_bp] = mem[mem[global_bp] - 1];
+                sp = mem[global_sp];
+                mem[sp] = ret_val;
+                mem[global_sp] = sp + 1;
+              }
               break;
-            }
-            case OP_GT: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] = mem[sp - 2] > mem[sp - 1] ? 1 : 0;
-              mem[GLOBAL_SP] = sp - 1;
+            case op_jmp:
+              mem[global_ip] = mem[mem[global_ip] + 1] - 1;
               break;
-            }
-            case OP_ADD: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] += mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 1;
+            case op_jze:
+              {
+                let sp = mem[global_sp];
+                if (mem[sp - 1] === 0)
+                  mem[global_ip] = mem[mem[global_ip] + 1] - 1;
+                else mem[global_ip] = mem[global_ip] + 1;
+                mem[global_sp] = sp - 1;
+              }
               break;
-            }
-            case OP_SUB: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] -= mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 1;
+            case op_or:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] |= mem[sp - 1];
+                mem[global_sp] = sp - 1;
+              }
               break;
-            }
-            case OP_MUL: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] *= mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 1;
+            case op_and:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] &= mem[sp - 1];
+                mem[global_sp] = sp - 1;
+              }
               break;
-            }
-            case OP_DIV: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] = Math.floor(mem[sp - 2] / mem[sp - 1]);
-              mem[GLOBAL_SP] = sp - 1;
+            case op_eq:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] = (mem[sp - 2] === mem[sp - 1]) ? 1 : 0;
+                mem[global_sp] = sp - 1;
+              }
               break;
-            }
-            case OP_MOD: {
-              const sp = mem[GLOBAL_SP];
-              mem[sp - 2] %= mem[sp - 1];
-              mem[GLOBAL_SP] = sp - 1;
+            case op_ne:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] = (mem[sp - 2] !== mem[sp - 1]) ? 1 : 0;
+                mem[global_sp] = sp - 1;
+              }
               break;
-            }
-            case OP_SVC: {
-              const sp = mem[GLOBAL_SP];
-              return mem[sp - 1];
-            }
+            case op_lt:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] = (mem[sp - 2] < mem[sp - 1]) ? 1 : 0;
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_gt:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] = (mem[sp - 2] > mem[sp - 1]) ? 1 : 0;
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_add:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] += mem[sp - 1];
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_sub:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] -= mem[sp - 1];
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_mul:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] *= mem[sp - 1];
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_div:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] = Math.floor(mem[sp - 2] / mem[sp - 1]);
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_mod:
+              {
+                let sp = mem[global_sp];
+                mem[sp - 2] %= mem[sp - 1];
+                mem[global_sp] = sp - 1;
+              }
+              break;
+            case op_svc:
+              {
+                let sp = mem[global_sp];
+                let svc_arg = mem[sp - 1];
+                if (svc_arg === 0) {
+                  mem[global_io] = await vm_input();
+                } else if (svc_arg === 1) {
+                  await vm_output(mem[global_io]);
+                } else if (svc_arg === 2) {
+                  await new Promise(resolve => setTimeout(resolve, mem[global_io] * 1000));
+                }
+              }
+              break;
             default:
               break;
           }
-          mem[GLOBAL_IP]++;
+          mem[global_ip]++;
         }
       }
-
-      async function runVM(code) {
-        await compile(code);
-        while (true) {
-          const result = await StepVM();
-          if (result === 0) {
-            mem[GLOBAL_IO] = await dequeueInputChar();
-          } else if (result === 1) {
-            await printToTerminal(mem[GLOBAL_IO]);
-          } else if (result === 2) {
-            await new Promise(resolve => setTimeout(resolve, mem[GLOBAL_IO] * 1000));
-          }
-        }
-      }
-
       const terminal = document.getElementById("terminal");
-      const inputQueue = [];
 
-      async function dequeueInputChar() {
-        console.log(inputQueue[0]);
-        if (inputQueue.length) {
-          return inputQueue.shift();
-        } else {
-          return 0;
-        }
+      const input_queue = [];
+      document.addEventListener("keydown", ({ key }) => {
+        if (key.length === 1) input_queue.push(key.charCodeAt(0));
+        else if (key === "Enter") input_queue.push(13);
+      });
+
+      async function vm_input() {
+        return new Promise(resolve => {
+          const check_queue = () => {
+            if (input_queue.length) resolve(input_queue.shift());
+            else setTimeout(check_queue, 10);
+          };
+          check_queue();
+        });
       }
-
-      async function printToTerminal(ch) {
-        console.log(ch);
+      async function vm_output(ch) {
         terminal.textContent += String.fromCharCode(ch);
       }
 
-      document.addEventListener("keydown", ({ key }) => {
-        if (key.length === 1) inputQueue.push(key.charCodeAt(0));
-        else if (key === "Enter") inputQueue.push(13);
-      });
+      async function vm_run(code) {
+        const mem = compile(code);
+        await vm_exec(mem);
+      }
 
-      document.getElementById("runButton").addEventListener("click", async () => {
+      document.getElementById("run_button").addEventListener("click", async () => {
         terminal.textContent = "";
-        const code = document.getElementById("codeInput").value;
-        try {
-          await runVM(code);
-        } catch (err) {
-          printToTerminal(`\nError: ${err.message}`);
-        }
+        const code = document.getElementById("code_input").value;
+        await vm_run(code);
       });
 
       window.compile = compile;
-      window.runVM = runVM;
+      window.run_script = vm_exec;
     })();
   </script>
 </body>
