@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://www.sxclij.com/</loc>
-        <lastmod>2025-02-16</lastmod>
+        <lastmod>2025-02-17</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
     </url>
@@ -309,6 +309,12 @@
     <url>
         <loc>https://www.sxclij.com/daily/20250216</loc>
         <lastmod>2025-02-16</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://www.sxclij.com/daily/20250217</loc>
+        <lastmod>2025-02-17</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
