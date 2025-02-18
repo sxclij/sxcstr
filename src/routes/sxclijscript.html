@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>sxclijscript</title>
+  <title>sxclijscript Optimized VM with Triangle Drawing</title>
   <style>
     body {
       margin: 0;
@@ -66,6 +66,12 @@
       font-size: 1em;
       cursor: pointer;
     }
+
+    #gameCanvas {
+      border: 1px solid #444;
+      background: #222;
+      margin-top: 10px;
+    }
   </style>
 </head>
 
@@ -79,19 +85,34 @@ main()
 
 fn _read() (
     4 = 0
-    &result = svc(0)
-    return (result)
+    svc()
+    return (*5)
 )
 
 fn _write(ch) (
     4 = 1
-    &result = svc(ch)
+    5 = ch
+    svc()
     return (0)
 )
 
 fn _msleep(t) (
     4 = 2
-    &result = svc(t)
+    5 = t
+    svc()
+    return (0)
+)
+
+fn _draw(x1, y1, x2, y2, x3, y3, color) (
+    4 = 3
+    5 = x1
+    6 = y1
+    7 = x2
+    8 = y2
+    9 = x3
+    10 = y3
+    11 = color
+    svc()
     return (0)
 )
 
@@ -147,6 +168,7 @@ fn input() (
 )
 
 fn main() (
+    _draw(100, 100, 200, 100, 150, 200, 16711680)
     loop (
         input()
         &result = _msleep(100)
@@ -156,6 +178,7 @@ fn main() (
   </div>
   <div id="terminal_container">
     <div id="terminal"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
   </div>
 
   <script>
@@ -192,7 +215,15 @@ fn main() (
         global_ip = 1,
         global_sp = 2,
         global_bp = 3,
-        global_io = 4;
+        global_io1 = 4,
+        global_io2 = 5,
+        global_io3 = 6,
+        global_io4 = 7,
+        global_io5 = 8,
+        global_io6 = 9,
+        global_io7 = 10,
+        global_io8 = 11;
+
       const mem_sz = 1 << 20,
         glob_sz = 1 << 8,
         stk_sz = 1 << 10;
@@ -515,7 +546,7 @@ fn main() (
       }
 
       function link_instructions(mem, labels, lab_size) {
-        for (let i = glob_sz; i < mem.length && mem[i].op !== op_null; i++) {
+        for (let i = glob_sz; i < mem.length && mem[i] !== op_null; i++) {
           if (mem[i] === op_jmp || mem[i] === op_jze || mem[i] === op_call) {
             i++;
             mem[i] = labels[mem[i]].inst_index;
@@ -543,7 +574,7 @@ fn main() (
             case op_nop:
               break;
             case op_push_const:
-              mem[global_ip]++; // Advance to operand
+              mem[global_ip]++;
               {
                 let sp = mem[global_sp];
                 mem[sp] = mem[mem[global_ip]];
@@ -688,13 +719,31 @@ fn main() (
             case op_svc:
               {
                 let sp = mem[global_sp];
-                let svc_arg = mem[global_io];
+                let svc_arg = mem[global_io1];
                 if (svc_arg === 0) {
-                  mem[sp - 1] = await vm_input();
+                  mem[global_io2] = await vm_input();
                 } else if (svc_arg === 1) {
-                  await vm_output(mem[sp - 1]);
+                  await vm_output(mem[global_io2]);
                 } else if (svc_arg === 2) {
-                  await new Promise(resolve => setTimeout(resolve, mem[sp - 1] * 1000));
+                  await new Promise(resolve => setTimeout(resolve, mem[global_io2] * 1000));
+                } else if (svc_arg === 3) {
+                  {
+                    const y1 = mem[global_io2];
+                    const x1 = mem[global_io3];
+                    const y2 = mem[global_io4];
+                    const x2 = mem[global_io5];
+                    const y3 = mem[global_io6];
+                    const x3 = mem[global_io7];
+                    const color = mem[global_io8];
+                    let hexColor = "#" + ("00000" + color.toString(16)).slice(-6);
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.lineTo(x3, y3);
+                    ctx.closePath();
+                    ctx.fillStyle = hexColor;
+                    ctx.fill();
+                  }
                 }
               }
               break;
@@ -705,6 +754,8 @@ fn main() (
         }
       }
       const terminal = document.getElementById("terminal");
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
 
       const input_queue = [];
       document.addEventListener("keydown", ({ key }) => {
@@ -727,11 +778,16 @@ fn main() (
 
       async function vm_run(code) {
         const mem = compile(code);
+        // 初期値：描画モード 0 (塗り), 線幅 2
+        mem[global_io1] = 0;
+        mem[global_io2] = 2;
         await vm_exec(mem);
       }
 
       document.getElementById("run_button").addEventListener("click", async () => {
         terminal.textContent = "";
+        // canvas もクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         const code = document.getElementById("code_input").value;
         await vm_run(code);
       });
