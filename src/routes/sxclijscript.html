@@ -103,7 +103,7 @@ fn _msleep(t) (
     return (0)
 )
 
-fn _draw(x1, y1, x2, y2, x3, y3, color) (
+fn _draw_tri(x1, y1, x2, y2, x3, y3, color) (
     4 = 3
     5 = x1
     6 = y1
@@ -153,25 +153,33 @@ fn vec_pop(v) (
     return (result)
 )
 
-fn input_ch(ch) (
-    &result = _write(ch)
-)
-
-fn input() (
+fn main() (
+    &x = 100
+    &y = 100
+    &r = 50
+    &speed = 5
     loop (
+      loop(
         &ch = _read()
         if(ch == 0) (
-            break
+          break
         )
-        input_ch(ch)
-    )
-)
-
-fn main() (
-    _draw(100, 100, 200, 100, 150, 200, 16711680)
-    loop (
-        input()
-        &result = _msleep(100)
+        if(ch == 97) (
+          &x = x - speed
+        )
+        if(ch == 100) (
+          &x = x + speed
+        )
+        if(ch == 115) (
+          &y = y - speed
+        )
+        if(ch == 119) (
+          &y = y + speed
+        )
+      )
+      &result = _draw_tri(x-50, y-50, x+50, y-50, x+50, y+50, 16711680)
+      &result = _draw_tri(x-50, y-50, x-50, y+50, x+50, y+50, 16711680)
+      &result = _msleep(100)
     )
 )
     </textarea>
@@ -725,15 +733,16 @@ fn main() (
                 } else if (svc_arg === 1) {
                   await vm_output(mem[global_io2]);
                 } else if (svc_arg === 2) {
-                  await new Promise(resolve => setTimeout(resolve, mem[global_io2] * 1000));
+                  await new Promise(resolve => setTimeout(resolve, mem[global_io2]));
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
                 } else if (svc_arg === 3) {
                   {
-                    const y1 = mem[global_io2];
-                    const x1 = mem[global_io3];
-                    const y2 = mem[global_io4];
-                    const x2 = mem[global_io5];
-                    const y3 = mem[global_io6];
-                    const x3 = mem[global_io7];
+                    const x1 = mem[global_io2];
+                    const y1 = canvas.height - mem[global_io3];
+                    const x2 = mem[global_io4];
+                    const y2 = canvas.height - mem[global_io5];
+                    const x3 = mem[global_io6];
+                    const y3 = canvas.height - mem[global_io7];
                     const color = mem[global_io8];
                     let hexColor = "#" + ("00000" + color.toString(16)).slice(-6);
                     ctx.beginPath();
@@ -756,37 +765,32 @@ fn main() (
       const terminal = document.getElementById("terminal");
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
-
       const input_queue = [];
-      document.addEventListener("keydown", ({ key }) => {
-        if (key.length === 1) input_queue.push(key.charCodeAt(0));
-        else if (key === "Enter") input_queue.push(13);
-      });
 
       async function vm_input() {
-        return new Promise(resolve => {
-          const check_queue = () => {
-            if (input_queue.length) resolve(input_queue.shift());
-            else setTimeout(check_queue, 10);
-          };
-          check_queue();
-        });
+        return input_queue.length ? input_queue.shift() : 0;
       }
+
       async function vm_output(ch) {
         terminal.textContent += String.fromCharCode(ch);
       }
 
       async function vm_run(code) {
         const mem = compile(code);
-        // 初期値：描画モード 0 (塗り), 線幅 2
         mem[global_io1] = 0;
         mem[global_io2] = 2;
         await vm_exec(mem);
       }
 
+      document.addEventListener("keydown", ({ key }) => {
+        const code = key.length === 1 ? key.charCodeAt(0) : key === "Enter" ? 13 : null;
+        if (code !== null) {
+          input_queue.push(code);
+        }
+      });
+
       document.getElementById("run_button").addEventListener("click", async () => {
         terminal.textContent = "";
-        // canvas もクリア
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const code = document.getElementById("code_input").value;
         await vm_run(code);
