@@ -84,103 +84,156 @@
 main()
 
 fn _read() (
-    4 = 0
-    svc()
-    return (*5)
+  4 = 0
+  svc()
+  return (*5)
 )
 
 fn _write(ch) (
-    4 = 1
-    5 = ch
-    svc()
-    return (0)
+  4 = 1
+  5 = ch
+  svc()
+  return (0)
 )
 
 fn _msleep(t) (
-    4 = 2
-    5 = t
-    svc()
-    return (0)
+  4 = 2
+  5 = t
+  svc()
+  return (0)
 )
 
 fn _draw_tri(x1, y1, x2, y2, x3, y3, color) (
-    4 = 3
-    5 = x1
-    6 = y1
-    7 = x2
-    8 = y2
-    9 = x3
-    10 = y3
-    11 = color
-    svc()
-    return (0)
+  4 = 3
+  5 = x1
+  6 = y1
+  7 = x2
+  8 = y2
+  9 = x3
+  10 = y3
+  11 = color
+  svc()
+  return (0)
 )
 
 fn _allocate(dst, size) (
-    &x = *3 - 2
-    x = *x + size + 2
-    dst = x
+  &x = *3 - 2
+  x = *x + size + 2
+  dst = x
 )
 
 fn vec_init(v) (
-    v = 0
+  v = 0
 )
 
 fn vec_size(v) (
-    return (*v)
+  return (*v)
 )
 
 fn vec_get(v, i) (
-    return (*(v + i + 1))
+  return (*(v + i + 1))
 )
 
 fn vec_provide(v, i) (
-    return (v + i + 1)
+  return (v + i + 1)
 )
 
 fn vec_set(v, i, x) (
-    v + i + 1 = x
+  v + i + 1 = x
 )
 
 fn vec_push(v, x) (
-    v = *v + 1
-    v + *v = x
+  v = *v + 1
+  v + *v = x
 )
 
 fn vec_pop(v) (
-    &result = v + *v
-    v = *v - 1
-    return (result)
+  &result = v + *v
+  v = *v - 1
+  return (result)
+)
+
+fn color_make(r, g, b) (
+  return (r * 65536 + g * 256 + b)
 )
 
 fn main() (
-    &x = 100
-    &y = 100
-    &r = 50
-    &speed = 5
-    loop (
-      loop(
-        &ch = _read()
-        if(ch == 0) (
-          break
-        )
-        if(ch == 97) (
-          &x = x - speed
-        )
-        if(ch == 100) (
-          &x = x + speed
-        )
-        if(ch == 115) (
-          &y = y - speed
-        )
-        if(ch == 119) (
-          &y = y + speed
+  &cube_count = 5
+  &cube_target = 0
+  &grid_size = 24
+  
+  _allocate(&cube_data_x, cube_count + 2)
+  _allocate(&cube_data_y, cube_count + 2)
+  _allocate(&cube_data_r, cube_count + 2)
+
+  vec_init(cube_data_x)
+  vec_init(cube_data_y)
+  vec_init(cube_data_r)
+
+  &i = 0
+  loop(
+    if(i == cube_count) (
+      break
+    )
+    &result = vec_set(cube_data_x, i, i * grid_size)
+    &result = vec_set(cube_data_y, i, i * grid_size)
+    &result = vec_set(cube_data_r, i, grid_size / 2)
+    &i = i + 1
+  )
+  
+  loop (
+    loop(
+      &ch = _read()
+      if(ch == 0) (
+        break
+      )
+      if(ch == 113) (
+        &cube_target = (cube_target - 1) % cube_count
+        if(cube_target < 0) (
+          &cube_target = cube_count - 1
         )
       )
-      &result = _draw_tri(x-50, y-50, x+50, y-50, x+50, y+50, 16711680)
-      &result = _draw_tri(x-50, y-50, x-50, y+50, x+50, y+50, 16711680)
-      &result = _msleep(100)
+      if(ch == 101) (
+        &cube_target = (cube_target + 1) % cube_count
+      )
+      if(ch == 97) (
+        &tmp = vec_get(cube_data_x, cube_target) - grid_size
+        vec_set(cube_data_x, cube_target, tmp)
+      )
+      if(ch == 100) (
+        &tmp = vec_get(cube_data_x, cube_target) + grid_size
+        vec_set(cube_data_x, cube_target, tmp)
+      )
+      if(ch == 115) (
+        &tmp = vec_get(cube_data_y, cube_target) - grid_size
+        vec_set(cube_data_y, cube_target, tmp)
+      )
+      if(ch == 119) (
+        &tmp = vec_get(cube_data_y, cube_target) + grid_size
+        vec_set(cube_data_y, cube_target, tmp)
+      )
     )
+
+    &i = 0
+    loop(
+      if(i == cube_count) (
+        break
+      )
+      &x = vec_get(cube_data_x, i)
+      &y = vec_get(cube_data_y, i)
+      &r = vec_get(cube_data_r, i)
+      if(i == cube_target) (
+        &color = color_make(0, 255, 0)
+      ) else (
+        &color = color_make(255, 0, 0)
+      )
+      &result = _draw_tri(x-r, y-r, x+r, y-r, x+r, y+r, color)
+      &result = _draw_tri(x-r, y-r, x-r, y+r, x+r, y+r, color)
+      &i = i + 1
+    )
+
+    &result = _msleep(100)
+  )
 )
     </textarea>
   </div>
