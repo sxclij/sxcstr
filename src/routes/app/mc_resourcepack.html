@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Resource Pack Maker</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .section {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .section h2 {
+          margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+            margin-bottom: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+          background-color: #3e8e41;
+        }
+        #downloadLink {
+          display: none; /* Initially hidden */
+          margin-top: 10px;
+        }
+        .item-entry {
+            border: 1px solid #ddd;
+            padding: 8px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Minecraft Resource Pack Maker</h1>
+
+    <div class="container">
+
+        <div class="section">
+            <h2>Pack Information</h2>
+            <label for="packName">Pack Name:</label>
+            <input type="text" id="packName" placeholder="My Resource Pack" value="MyResourcePack">
+
+            <label for="packDescription">Pack Description:</label>
+            <textarea id="packDescription" placeholder="A custom resource pack."></textarea>
+
+            <label for="packFormat">Pack Format (Minecraft Version):</label>
+            <input type="number" id="packFormat" placeholder="e.g., 26 (for 1.20.4)" value="26" min="1">
+
+            <label for="packNamespace">Pack Namespace (lowercase, no spaces):</label>
+            <input type="text" id="packNamespace" placeholder="my_pack" value="my_pack">
+        </div>
+
+
+        <div class="section">
+            <h2>Items (Custom Model Data)</h2>
+             <p>Enter item details.  Leave Custom Model Data blank to skip that item.</p>
+            <div id="itemEntries">
+                <div class="item-entry">
+                    <label for="itemName0">Item Name (e.g., diamond_sword):</label>
+                    <input type="text" id="itemName0" class="itemName" placeholder="diamond_sword">
+                    <label for="customModelData0">Custom Model Data (integer):</label>
+                    <input type="number" id="customModelData0" class="customModelData" placeholder="1">
+                </div>
+            </div>
+            <button type="button" onclick="addItemEntry()">Add Another Item</button>
+        </div>
+
+
+        <button onclick="generateResourcePack()">Generate Resource Pack</button>
+        <a id="downloadLink" href="#" download="">Download Resource Pack</a>
+
+    </div>
+
+
+
+
+    <script>
+
+    function addItemEntry() {
+        const itemEntries = document.getElementById('itemEntries');
+        const newIndex = itemEntries.children.length;
+
+        const newEntry = document.createElement('div');
+        newEntry.classList.add('item-entry');
+        newEntry.innerHTML = `
+            <label for="itemName${newIndex}">Item Name (e.g., diamond_sword):</label>
+            <input type="text" id="itemName${newIndex}" class="itemName" placeholder="diamond_sword">
+            <label for="customModelData${newIndex}">Custom Model Data (integer):</label>
+            <input type="number" id="customModelData${newIndex}" class="customModelData" placeholder="1">
+        `;
+        itemEntries.appendChild(newEntry);
+    }
+
+
+    async function generateResourcePack() {
+      const packName = document.getElementById('packName').value;
+      const packDescription = document.getElementById('packDescription').value;
+      const packFormat = parseInt(document.getElementById('packFormat').value, 10);
+      const packNamespace = document.getElementById('packNamespace').value.toLowerCase().replace(/ /g, '_');
+
+      if (!packName || !packFormat || !packNamespace) {
+          alert("Please fill in Pack Name, Pack Format, and Pack Namespace.");
+          return;
+      }
+
+
+      // 1. Create pack.mcmeta
+      const mcmeta = {
+          pack: {
+              pack_format: packFormat,
+              description: packDescription || ""  // Use empty string if description is null/undefined
+          }
+      };
+      const mcmetaContent = JSON.stringify(mcmeta, null, 2);
+
+
+      // 2. Create item overrides (models)
+      const itemEntries = document.querySelectorAll('.item-entry');
+      const modelOverrides = {};  //  itemName: { predicates: [], model: "..." }
+
+      itemEntries.forEach(entry => {
+          const itemName = entry.querySelector('.itemName').value;
+          const customModelData = parseInt(entry.querySelector('.customModelData').value, 10);
+
+          if (!itemName || isNaN(customModelData)) {
+              return; // Skip this item if either field is missing or invalid
+          }
+
+
+            // Create the model file content
+            const modelContent = {
+                parent: `item/generated`,
+                textures: {
+                    layer0: `${packNamespace}:item/${itemName}_${customModelData}` // IMPORTANT: Correct path
+                }
+            };
+            const modelContentString = JSON.stringify(modelContent, null, 2);
+            modelOverrides[`${itemName}_${customModelData}.json`] = modelContentString;
+
+
+          //Create or update the overrides
+          if (!modelOverrides[itemName]) {
+            modelOverrides[itemName] = { predicates: [], model: "" };
+          }
+          modelOverrides[itemName].predicates.push({
+              custom_model_data: customModelData
+          });
+          modelOverrides[itemName].model = `${packNamespace}:item/${itemName}_${customModelData}`;
+      });
+
+
+      // 3. Create item model files (overrides in item's JSON file)
+      const itemModelOverrides = {}; // Store the override data *per item*
+
+      for (const itemName in modelOverrides) {
+          if (!itemName.endsWith('.json')) {
+              if (!itemModelOverrides[itemName.split('_')[0]]) {  // Extract base item name (e.g., "diamond_sword")
+                  itemModelOverrides[itemName.split('_')[0]] = []; // Initialize array for this item
+              }
+              itemModelOverrides[itemName.split('_')[0]].push({
+                  predicate: { custom_model_data: modelOverrides[itemName].predicates[0].custom_model_data },
+                  model: modelOverrides[itemName].model
+              });
+          }
+      }
+
+
+        // 4. Create ZIP file using JSZip
+        const zip = new JSZip();
+
+        // Add pack.mcmeta
+        zip.file("pack.mcmeta", mcmetaContent);
+
+        // Create assets folder structure
+        const assetsFolder = zip.folder("assets");
+        const minecraftFolder = assetsFolder.folder(packNamespace);
+        const modelsFolder = minecraftFolder.folder("models");
+        const itemModelsFolder = modelsFolder.folder("item");
+        const texturesFolder = minecraftFolder.folder("textures");
+        const itemTexturesFolder = texturesFolder.folder("item");  // for your png files
+
+
+        //Add models to models/item  (modelOverrides contains the JSON *content*)
+        for (const modelFileName in modelOverrides) {
+          if (modelFileName.endsWith('.json')) {
+             itemModelsFolder.file(modelFileName, modelOverrides[modelFileName]);
+          }
+        }
+
+        // Add item model overrides (the "overrides" section in existing item files)
+        for (const baseItemName in itemModelOverrides) {
+            const itemModelContent = {
+                parent: `item/generated`, //  This might be different depending on the *base* item (handheld, etc.)
+                textures: {
+                    layer0: `item/${baseItemName}`  // Use Minecraft's default texture path
+                },
+                overrides: itemModelOverrides[baseItemName]
+            };
+
+            // Add override to the base item's JSON file
+            const itemModelJson = JSON.stringify(itemModelContent, null, 2);
+            //VERY IMPORTANT:  use "minecraft" namespace here, not your custom namespace
+            zip.file(`assets/minecraft/models/item/${baseItemName}.json`, itemModelJson);
+        }
+
+        // Placeholder for textures:  Add at least one dummy PNG file for each custom model
+        for (const modelFileName in modelOverrides) {
+          if (modelFileName.endsWith('.json')) {
+              const itemName = modelFileName.replace('.json', '');  // e.g., diamond_sword_1
+               // Create a very small, transparent PNG (1x1 pixel).
+                const dummyPngData = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+              itemTexturesFolder.file(`${itemName}.png`, atob(dummyPngData.split(',')[1]), {base64: true});
+          }
+        }
+
+
+        // Generate the zip file
+        zip.generateAsync({ type: "blob" })
+        .then(function(content) {
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = URL.createObjectURL(content);
+            downloadLink.download = `${packName}.zip`;
+            downloadLink.style.display = 'block';  // Show the link
+            downloadLink.textContent = `Download ${packName}.zip`;
+        });
+    }
+
+    </script>
+     <!-- Load JSZip library -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
