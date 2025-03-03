@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nostr Client - Instagram-like Dark</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --surface: #1e1e1e;
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --text: #e0e0e0;
+      --text-muted: #9e9e9e;
+      --border: #333333;
+      --success: #10b981;
+      --error: #ef4444;
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font-family);
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    .left-panel {
+      width: 300px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      box-sizing: border-box;
+    }
+
+    .right-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .status-indicator {
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-indicator::before {
+      content: '';
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+      display: block;
+    }
+
+    .connected { color: var(--success); }
+    .disconnected { color: var(--error); }
+
+    .relay-control {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .relay-buttons {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    input, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.8rem;
+      border-radius: 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+      font-family: var(--font-family);
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3);
+    }
+
+    .note {
+      background: var(--surface);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .note:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+    }
+
+    .note-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .note-avatar-placeholder {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background-color: var(--border);
+      margin-right: 0.75rem;
+    }
+
+    .note-user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pubkey-username {
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 0.1rem;
+    }
+
+    .timestamp {
+      font-style: normal;
+      opacity: 0.7;
+      font-size: 0.8rem;
+    }
+
+
+    .note-content {
+      white-space: pre-wrap;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .note-actions {
+      display: flex;
+      justify-content: flex-start;
+      gap: 1.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    .note-action-button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .note-action-button:hover {
+      opacity: 1;
+      color: var(--text);
+    }
+
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.6rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s ease-in-out, transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      font-size: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    button:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+      opacity: 0.7;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .auth-options {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .char-count {
+      text-align: right;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 0.4rem 0;
+    }
+
+    #notes {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    #relay-status-container {
+        margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .relay-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .relay-status-dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background-color: var(--error);
+    }
+    .relay-status-dot.connected {
+        background-color: var(--success);
+    }
+
+    @media (max-width: 768px) {
+      .wrapper {
+        flex-direction: column;
+      }
+      .left-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        overflow-y: visible;
+      }
+      .right-panel {
+        padding-top: 0;
+      }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="wrapper">
+    <aside class="left-panel">
+      <div class="container">
+        <header>
+          <h1>Nostr Client</h1>
+        </header>
+
+        <div id="connection-status" class="status-indicator disconnected">
+          Status: Disconnected
+        </div>
+
+        <div class="relay-control">
+          <input type="url" id="relayUrls" value="wss://relay.sxclij.com"
+                placeholder="wss://relay1.url,wss://relay2.url" pattern="^wss?://.+(,wss?://.+)*">
+          <div class="relay-buttons">
+              <button id="connectRelaysButton">Connect Relays</button>
+              <button id="disconnectRelaysButton">Disconnect Relays</button>
+          </div>
+          <div id="relay-status-container">
+              <!-- Relay statuses will be injected here -->
+          </div>
+        </div>
+
+        <section class="publish-section">
+          <h3>Publish Note</h3>
+          <textarea id="noteContent" placeholder="Share something..."
+                    maxlength="500"></textarea>
+          <div class="char-count">
+            <span id="charCount">0</span>/500 characters
+          </div>
+          <div class="auth-options">
+            <input type="password" id="privateKey"
+                  placeholder="nsec or hex key (temporary)">
+            <button id="generateKeyButton">Generate Key</button>
+            <button id="publishButton">Publish Securely</button>
+            <button id="nip07Button">Sign with Extension (NIP-07)</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="right-panel">
+      <div class="container">
+        <div id="notes"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/nostr-tools@1.13.0/lib/nostr.bundle.js"></script>
+  <script>
+    let relays = {};
+    let relayStatuses = {};
+    let activeSubscriptions = {};
+    let isConnected = false;
+
+    const elements = {
+      status: document.getElementById('connection-status'),
+      publishButton: document.getElementById('publishButton'),
+      nip07Button: document.getElementById('nip07Button'),
+      noteContent: document.getElementById('noteContent'),
+      privateKey: document.getElementById('privateKey'),
+      notes: document.getElementById('notes'),
+      charCount: document.getElementById('charCount'),
+      relayUrlsInput: document.getElementById('relayUrls'),
+      generateKeyButton: document.getElementById('generateKeyButton'),
+      connectRelaysButton: document.getElementById('connectRelaysButton'),
+      disconnectRelaysButton: document.getElementById('disconnectRelaysButton'),
+      relayStatusContainer: document.getElementById('relay-status-container')
+    };
+
+    elements.publishButton.addEventListener('click', publishNote);
+    elements.nip07Button.addEventListener('click', publishWithNIP07);
+    elements.noteContent.addEventListener('input', updateCharCount);
+    elements.generateKeyButton.addEventListener('click', generateKey);
+    elements.connectRelaysButton.addEventListener('click', connectToRelays);
+    elements.disconnectRelaysButton.addEventListener('click', disconnectFromRelays);
+
+
+    checkNIP07Support();
+    updateCharCount();
+    initializeRelayUrls();
+    renderRelayStatusesUI();
+
+    function updateCharCount() {
+      elements.charCount.textContent = elements.noteContent.value.length;
+    }
+
+    function setStatus(connected) {
+      isConnected = connected;
+      elements.status.textContent = `Status: ${connected ? 'Connected' : 'Disconnected'}`;
+      elements.status.className = `status-indicator ${connected ? 'connected' : 'disconnected'}`;
+    }
+
+    function updateRelayStatusUI(relayUrl, connected) {
+        relayStatuses[relayUrl] = connected;
+        renderRelayStatusesUI();
+    }
+
+    function renderRelayStatusesUI() {
+        elements.relayStatusContainer.innerHTML = '';
+        let overallConnected = false;
+        for (const relayUrl in relayStatuses) {
+            const connected = relayStatuses[relayUrl];
+            if (connected) overallConnected = true;
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'relay-status';
+            statusDiv.innerHTML = `
+                <div class="relay-status-dot ${connected ? 'connected' : ''}"></div>
+                <span>${relayUrl}</span>
+            `;
+            elements.relayStatusContainer.appendChild(statusDiv);
+        }
+        setStatus(overallConnected);
+    }
+
+
+    async function connectToRelays() {
+      const relayUrlsInput = elements.relayUrlsInput.value.trim();
+      const urls = relayUrlsInput.split(',').map(url => url.trim()).filter(url => url);
+
+      if (urls.length === 0) {
+        alert('Please enter at least one relay URL.');
+        return;
+      }
+
+      disconnectFromRelays();
+      relays = {};
+      relayStatuses = {};
+
+      for (const relayUrl of urls) {
+        if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+          console.warn(`Invalid WebSocket URL: ${relayUrl}`);
+          updateRelayStatusUI(relayUrl, false);
+          continue;
+        }
+        connectToRelay(relayUrl);
+      }
+      saveRelayUrls(relayUrlsInput);
+    }
+
+    async function connectToRelay(relayUrl) {
+      if (relays[relayUrl] && relays[relayUrl].readyState === WebSocket.OPEN) {
+        return;
+      }
+
+      const socket = new WebSocket(relayUrl);
+      relays[relayUrl] = socket;
+      relayStatuses[relayUrl] = false;
+
+      socket.onopen = () => {
+        console.log(`Connected to relay: ${relayUrl}`);
+        updateRelayStatusUI(relayUrl, true);
+        subscribeToNotes(relayUrl, socket);
+      };
+
+      socket.onmessage = (e) => {
+        try {
+          const [type, subId, event] = JSON.parse(e.data);
+          if (type === 'EVENT' && event?.kind === 1) {
+            displayNote(event);
+          }
+        } catch (error) {
+          console.warn(`Error parsing message from ${relayUrl}:`, error);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error(`WebSocket error for ${relayUrl}:`, error);
+        updateRelayStatusUI(relayUrl, false);
+        if (relays[relayUrl]) {
+            relays[relayUrl].close();
+            delete relays[relayUrl];
+        }
+      };
+
+      socket.onclose = () => {
+        console.log(`Disconnected from relay: ${relayUrl}`);
+        updateRelayStatusUI(relayUrl, false);
+        if (relays[relayUrl]) {
+            delete relays[relayUrl];
+        }
+        if (activeSubscriptions[relayUrl]) {
+            delete activeSubscriptions[relayUrl];
+        }
+      };
+    }
+
+    function disconnectFromRelays() {
+        for (const relayUrl in relays) {
+            if (relays[relayUrl] && relays[relayUrl].readyState === WebSocket.OPEN) {
+                console.log(`Disconnecting from relay: ${relayUrl}`);
+                relays[relayUrl].close();
+            }
+            delete relays[relayUrl];
+            updateRelayStatusUI(relayUrl, false);
+        }
+        relays = {};
+        activeSubscriptions = {};
+        setStatus(false);
+    }
+
+
+    function subscribeToNotes(relayUrl, socket) {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        console.warn(`Socket for ${relayUrl} is not open, cannot subscribe.`);
+        return;
+      }
+
+      const subId = `sub-${Date.now()}-${relayUrl.replace(/[^a-zA-Z0-9]/g, '')}`;
+      activeSubscriptions[relayUrl] = subId;
+
+      const filter = {
+        kinds: [1],
+        limit: 50,
+        since: Math.floor(Date.now() / 1000) - 86400
+      };
+
+      socket.send(JSON.stringify(['REQ', subId, filter]));
+    }
+
+    function displayNote(event) {
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note';
+
+      const noteHeader = document.createElement('div');
+      noteHeader.className = 'note-header';
+
+      const avatarPlaceholder = document.createElement('div');
+      avatarPlaceholder.className = 'note-avatar-placeholder';
+      noteHeader.appendChild(avatarPlaceholder);
+
+      const userInfo = document.createElement('div');
+      userInfo.className = 'note-user-info';
+      const usernameElement = document.createElement('span');
+      usernameElement.className = 'pubkey-username';
+      usernameElement.textContent = NostrTools.nip19.npubEncode(event.pubkey).slice(0, 12) + '...';
+      userInfo.appendChild(usernameElement);
+      const timestampElement = document.createElement('span');
+      timestampElement.className = 'timestamp';
+      const date = new Date(event.created_at * 1000).toLocaleString();
+      timestampElement.textContent = date;
+      userInfo.appendChild(timestampElement);
+      noteHeader.appendChild(userInfo);
+      noteElement.appendChild(noteHeader);
+
+
+      const safeContent = event.content.replace(/</g, '<').replace(/>/g, '>');
+      const contentElement = document.createElement('div');
+      contentElement.className = 'note-content';
+      contentElement.innerHTML = safeContent;
+      noteElement.appendChild(contentElement);
+
+      const noteActions = document.createElement('div');
+      noteActions.className = 'note-actions';
+
+      const likeButton = document.createElement('button');
+      likeButton.className = 'note-action-button';
+      likeButton.innerHTML = '❤️';
+      likeButton.title = 'Like (Placeholder)';
+      noteActions.appendChild(likeButton);
+      noteElement.appendChild(noteActions);
+
+
+      elements.notes.prepend(noteElement);
+    }
+
+    async function publishNote() {
+      const content = elements.noteContent.value.trim();
+      const privateKey = elements.privateKey.value.trim();
+
+      if (!content) return alert('Please enter some content');
+      if (!privateKey) return alert('Please provide a private key');
+      if (Object.keys(relays).length === 0) return alert('Not connected to any relay. Please connect to relays.');
+
+
+      try {
+        const sk = privateKey.startsWith('nsec1')
+          ? NostrTools.nip19.decode(privateKey).data
+          : privateKey;
+
+        const event = createBaseEvent(content, NostrTools.getPublicKey(sk));
+        event.sig = await NostrTools.signEvent(event, sk);
+        sendEvent(event);
+
+        elements.noteContent.value = '';
+        updateCharCount();
+      } catch (error) {
+        alert(`Publishing failed: ${error.message}`);
+      }
+    }
+
+    function createBaseEvent(content, pubkey) {
+      return {
+        kind: 1,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content,
+        pubkey,
+        id: '',
+        sig: ''
+      };
+    }
+
+    async function publishWithNIP07() {
+      if (!window.nostr) {
+        alert('No NIP-07 extension detected');
+        return;
+      }
+      if (Object.keys(relays).length === 0) return alert('Not connected to any relay. Please connect to relays.');
+
+
+      const content = elements.noteContent.value.trim();
+      if (!content) return alert('Please enter some content');
+
+      elements.nip07Button.textContent = 'Signing...';
+      elements.nip07Button.disabled = true;
+
+      try {
+        const pubkey = await window.nostr.getPublicKey();
+        const baseEvent = createBaseEvent(content, pubkey);
+        const signedEvent = await window.nostr.signEvent(baseEvent);
+        sendEvent(signedEvent);
+
+        elements.noteContent.value = '';
+        updateCharCount();
+      } catch (error) {
+        alert(`Extension signing failed: ${error.message}`);
+      } finally {
+        elements.nip07Button.textContent = 'Sign with Extension (NIP-07)';
+        elements.nip07Button.disabled = false;
+      }
+    }
+
+    function sendEvent(event) {
+      for (const relayUrl in relays) {
+          const socket = relays[relayUrl];
+          if (socket && socket.readyState === WebSocket.OPEN) {
+              if (!event.id) {
+                  event.id = NostrTools.getEventHash(event);
+              }
+              socket.send(JSON.stringify(['EVENT', event]));
+          }
+      }
+    }
+
+    function checkNIP07Support() {
+      if (!window.nostr) {
+        elements.nip07Button.disabled = true;
+        elements.nip07Button.title = "NIP-07 extension not detected";
+      }
+    }
+
+    function saveRelayUrls(urls) {
+        localStorage.setItem('relayUrls', urls);
+    }
+
+    function initializeRelayUrls() {
+        const savedRelayUrls = localStorage.getItem('relayUrls');
+        if (savedRelayUrls) {
+            elements.relayUrlsInput.value = savedRelayUrls;
+            connectToRelays();
+        }
+    }
+
+    function generateKey() {
+      const sk = NostrTools.generatePrivateKey();
+      const nsec = NostrTools.nip19.nsecEncode(sk);
+      elements.privateKey.value = nsec;
+    }
+  </script>
+</body>
+</html>
